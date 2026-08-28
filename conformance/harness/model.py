@@ -1,4 +1,4 @@
-"""Minimal transport-neutral model used by the AACP conformance harness."""
+"""Minimal transport-neutral model for AACP Core conformance tests."""
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
@@ -19,7 +19,6 @@ class Message:
     message_id: str
     task_id: str
     type: str
-    sequence: int
     payload: dict[str, Any] = field(default_factory=dict)
     causation_id: str | None = None
     correlation_id: str | None = None
@@ -44,13 +43,12 @@ class InvalidTransition(Exception):
 
 
 class Store:
-    """Tiny deterministic durable-state stand-in for reference tests."""
+    """Deterministic in-memory stand-in for a durable AACP implementation."""
 
     def __init__(self) -> None:
         self.tasks: dict[str, Task] = {}
         self.processed_messages: set[str] = set()
         self.messages: dict[str, Message] = {}
-        self.publication: dict[str, str] = {}
 
     def transition(self, task_id: str, expected: int, new_state: State) -> Task:
         task = self.tasks[task_id]
@@ -96,5 +94,6 @@ class Store:
         task.result_message_id = result.message_id
         self.messages[result.message_id] = result
 
-    def publish(self, message_id: str) -> None:
-        self.publication[message_id] = "PUBLISHED"
+    def fail(self, task_id: str) -> None:
+        task = self.tasks[task_id]
+        self.transition(task_id, task.state_version, State.FAILED)
