@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/wise108/aacp/schemas/result.schema.json",
+  "title": "AACP 1.0 Result",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["task_id", "status"],
+  "properties": {
+    "task_id": {"type": "string", "pattern": "^T-.+"},
+    "status": {"enum": ["COMPLETED", "FAILED"]},
+    "summary": {"type": "string"},
+    "evidence": {"type": "object"}
+  }
+}
