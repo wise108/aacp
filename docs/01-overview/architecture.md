@@ -16,13 +16,15 @@ User / Application
  Agent Runtime (ACP / MCP / tools / LLM)
 ```
 
-AACP defines the durable contract for tasks, messages, results, publication and recovery. It deliberately does not define the internal execution protocol of an agent.
+AACP Core defines the durable contract for agent-to-agent messages, task lifecycle, acknowledgement, results, errors, idempotency and recovery semantics. It deliberately does not define the internal execution protocol of an agent.
 
 ## Separation of concerns
 
-- **AACP Core** — semantics and reliability guarantees.
-- **Transport profile** — how AACP records/messages move between participants.
+- **AACP Core** — message semantics and reliability guarantees.
+- **Transport profile** — how AACP messages move between participants.
 - **Implementation** — storage, scheduling, orchestration and agent runtime.
 - **Project policy** — project-specific rules that must not redefine Core semantics.
 
 The same AACP Core can therefore be implemented by the AI Assistant and Cursor Remote Agent without forcing them to share their internal architecture.
+
+AACP Core does not define publication workflows, brokers, distributed transactions, heartbeats, or other infrastructure concerns unless a separate transport or extension specification explicitly defines them.
