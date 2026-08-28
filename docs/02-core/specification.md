@@ -34,7 +34,7 @@ A receiver MAY support unordered processing for explicitly declared streams. In 
 
 ## 7. Delivery and idempotency
 
-AACP Core uses **at-least-once delivery semantics**. A sender MAY retransmit a message when delivery or acknowledgement is uncertain. Receivers MUST therefore be idempotent for commands.
+AACP Core uses **at-least-once delivery semantics**. A sender MAY retransmit a message when delivery or acknowledgement is uncertain. Receivers MUST therefore support idempotent command processing.
 
 `message_id` is the idempotency key. A receiver claiming crash-safe duplicate suppression MUST durably record sufficient processing state before acknowledging a command, or use a command handler whose side effect is independently idempotent.
 
