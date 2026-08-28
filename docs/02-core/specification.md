@@ -1,121 +1,108 @@
 # AACP Core 1.0
 
-This document is the normative Core specification.
+AACP is a small, transport-independent contract for reliable collaboration between software agents.
 
-## 1. Purpose
+## Scope
 
-AACP provides a minimal, reliable contract for collaboration between autonomous software agents in environments where messages and state may be duplicated, reordered, delayed, partially published, or interrupted by process failure.
+Core defines only conversation, task, message, result, identity, delivery, acknowledgement, lifecycle, recovery, cancellation, and optional ordering.
 
-## 2. Non-goals
+Core does not define LLMs, prompts, agent runtimes, Cursor ACP, MCP, Telegram, databases, brokers, or a mandatory transport.
 
-AACP Core does not define model selection or prompting, agent internals, Cursor ACP, MCP, Telegram/UI protocols, a message broker, distributed locking, event sourcing, or a mandatory transport.
+## Message envelope
 
-## 3. Core objects
+Required fields:
 
-AACP 1.0 defines six normative objects: Envelope, Task, Message, Result, Publication, and Error.
+`protocol`, `version`, `message_id`, `conversation_id`, `task_id`, `type`, `sender`, `recipient`, `created_at`, `payload`.
 
-## 4. Identity
+Message types are: `command`, `ack`, `result`, `error`, `cancel`, `event`.
 
-Identifiers use prefixes `C-`, `T-`, and `M-` followed by a globally unique identifier such as a ULID. `conversation_id` identifies a logical collaboration conversation; `task_id` identifies a unit of work; `message_id` identifies one immutable message and is its idempotency key.
+Optional fields are `correlation_id`, `causation_id`, `sequence`, and `stream_id`.
 
-## 5. Envelope
+`sequence` and `stream_id` are used only when ordering is required by a transport profile. Retransmission reuses the original sequence.
 
-Every AACP message MUST contain `protocol`, `version`, `message_id`, `task_id`, `conversation_id`, `stream_id`, `sender`, `recipient`, `sequence`, `type`, `created_at`, and `payload`. Message types are `command`, `ack`, `result`, `error`, `cancel`, and `event`.
+## Identity and delivery
 
-`correlation_id` and `causation_id` MAY be supplied as optional metadata. `stream_id` is an explicit logical stream identifier; it is required because ordering is scoped to a stream.
+`message_id` is the immutable identity and idempotency key of one message.
 
-`created_at` MUST be an RFC 3339 timestamp in UTC. Receivers MUST reject malformed timestamps.
+`task_id` identifies one logical unit of work.
 
-## 6. Streams and ordering
+AACP uses at-least-once delivery semantics. A retry of the same message MUST reuse its `message_id` and MUST NOT create a new logical command.
 
-An ordered stream is identified by `(conversation_id, stream_id)`. The stream has an explicit direction/participant binding established by the transport/session context. Sequence numbers are scoped to that stream and start at 1. Within an ordered stream they MUST increase by exactly 1 for each newly created message.
+Duplicate command delivery MUST NOT cause duplicate logical execution when AACP idempotency rules are implemented.
 
-A receiver MUST detect a missing sequence. Under strict ordering it MUST NOT silently process a later message while an earlier sequence is missing. It SHOULD retain the later message and report `SEQUENCE_GAP`.
+AACP does not promise exactly-once network delivery.
 
-A receiver MAY support unordered processing for explicitly declared streams. In that case sequence numbers MUST NOT impose a processing barrier.
+## ACK
 
-A retransmission of an existing message MUST reuse the original `message_id` and sequence; it MUST NOT consume a new sequence number.
+A receiver SHOULD acknowledge a command. ACK status MUST distinguish:
 
-## 7. Delivery and idempotency
+- `accepted` — durably accepted for processing;
+- `rejected` — will not be processed;
+- `duplicate` — already accepted or processed.
 
-AACP Core uses **at-least-once delivery semantics**. A sender MAY retransmit a message when delivery or acknowledgement is uncertain. Receivers MUST therefore support idempotent command processing.
+`accepted` does not mean completed.
 
-`message_id` is the idempotency key. A receiver claiming crash-safe duplicate suppression MUST durably record sufficient processing state before acknowledging a command, or use a command handler whose side effect is independently idempotent.
+If an ACK is lost, the sender MAY retransmit the original command. The receiver MUST NOT execute it twice.
 
-A duplicate command MUST NOT execute its side effect more than once when the implementation claims AACP command idempotency. AACP does NOT provide exactly-once network delivery.
+## Task lifecycle
 
-## 8. Task lifecycle
+Core states are:
 
-Task statuses are `PENDING`, `ACCEPTED`, `IN_PROGRESS`, `BLOCKED`, `COMPLETED`, `FAILED`, and `CANCELLED`. `ACCEPTED` is the durable acknowledgement boundary between receipt and execution. Implementations MUST enforce valid state transitions and MUST reject invalid transitions. See [AACP-TASK-STATE-MACHINE.md](AACP-TASK-STATE-MACHINE.md).
+`PENDING → ACCEPTED → IN_PROGRESS → COMPLETED`
 
-## 9. Optimistic concurrency
+`IN_PROGRESS → FAILED | CANCELLED | BLOCKED`
 
-A Task MUST contain `state_version`. State mutation MUST use an expected version (CAS semantics or an equivalent atomic mechanism). If the expected version differs from the stored version, the mutation MUST fail with `STATE_CONFLICT` and MUST NOT overwrite newer state.
+`BLOCKED → IN_PROGRESS`
 
-## 10. Acknowledgement
+`PENDING → CANCELLED`
 
-A receiver MUST send an `ack` for a received `command` unless the transport profile explicitly defines an equivalent reliable receipt mechanism. ACK status MUST distinguish at least `accepted`, `rejected`, and `duplicate`.
+`ACCEPTED → CANCELLED`
 
-`accepted` means the message passed protocol validation and has been durably accepted for processing; it does NOT mean the task completed.
+`FAILED → IN_PROGRESS` only when an explicit retry policy exists.
 
-`rejected` means the message will not be processed. The receiver SHOULD provide an error code/reason.
+`COMPLETED` and `CANCELLED` are terminal. Invalid transitions MUST be rejected.
 
-`duplicate` means the message was already durably accepted or processed; the receiver MUST NOT execute it again.
+## Concurrency
 
-Completion is represented by a `result` or `error` message. ACK delivery itself is not assumed reliable; senders MUST tolerate retry.
+An implementation storing mutable task state MUST prevent stale updates from overwriting newer state. `state_version` with compare-and-set semantics is RECOMMENDED.
 
-## 11. Result
+If `state_version` is used, a stale mutation MUST fail with `STATE_CONFLICT`.
 
-A Result records the outcome of task execution. A completed task SHOULD include a concise summary and MAY include evidence such as commit references, test commands and exit codes, changed files, or other transport-neutral evidence.
+## Results and errors
 
-A Result MUST NOT be interpreted as proof that it is remotely available.
+A successful task produces a `result` message. A failed task produces an `error` message.
 
-## 12. Publication
+Result and error messages are immutable and have their own `message_id`.
 
-Publication describes whether a Result is available to the remote participant through the selected transport. Publication status is `PENDING`, `PUBLISHED`, or `FAILED`.
+## Recovery
 
-`task.status: COMPLETED` and `publication.status: PUBLISHED` are independent facts. For a transport that supports remote verification, `PUBLISHED` MUST only be set after the transport confirms that the referenced Result is available remotely.
+Crash-safe implementations MUST persist enough information to distinguish accepted work, started execution, completed execution, and known results.
 
-If publication succeeds remotely but the process crashes before local publication state is persisted, recovery MUST verify the remote artifact and reconcile local state to `PUBLISHED`. Publication reconciliation MUST NOT re-execute the Task.
+After restart, an agent MUST NOT execute a command again merely because an ACK or result was lost.
 
-## 13. Failure and recovery
+If execution outcome is unknown, the implementation MUST reconcile it or use an idempotent operation before retrying.
 
-Agents MUST persist enough durable state to recover after restart. On recovery, an implementation MUST reconcile pending messages, unacknowledged messages, in-progress tasks, completed results with pending publication, and transport publication state.
+## Cancellation
 
-An implementation MUST NOT re-execute a command solely because an ACK or RESULT was lost. If execution may have happened without a durable processing record, recovery MUST treat the operation as potentially executed and use idempotent reconciliation rather than blindly re-running it.
+`cancel` requests cancellation. Cancellation MUST NOT overwrite newer task state. A running operation MAY refuse cancellation when safe cancellation is impossible.
 
-## 14. Heartbeat
+## Events
 
-Long-running `IN_PROGRESS` tasks SHOULD update `heartbeat_at`. A stale heartbeat MAY trigger recovery. `STALE` is a diagnostic/recovery condition, not a Core Task status.
+`event` carries non-terminal information such as progress. An event is not completion unless its contract explicitly says so.
 
-## 15. Cancellation
+## Extensions
 
-A `cancel` message requests cancellation of a task. Cancellation MUST use optimistic concurrency with the current `state_version`.
+Implementations MAY add fields and project-specific codes, but MUST NOT change Core semantics.
 
-If a cancellation request is based on version N and another valid mutation changes the task to version N+1 before cancellation commits, cancellation MUST fail with `STATE_CONFLICT` and MUST NOT overwrite the newer state.
+## Minimal conformance
 
-If the task is already terminal (`COMPLETED`, `FAILED`, or `CANCELLED`), cancellation MUST NOT change its state. The implementation SHOULD return the current terminal state as the authoritative outcome.
+A Core 1.0 implementation MUST demonstrate:
 
-Therefore, in a completion/cancellation race, the first successfully committed state transition wins; a stale concurrent operation loses with `STATE_CONFLICT`.
+1. immutable unique message identity;
+2. safe duplicate command handling;
+3. accepted/rejected/duplicate ACK semantics;
+4. valid task lifecycle enforcement;
+5. protection against stale state overwrite;
+6. safe restart behavior for uncertain execution.
 
-## 16. Errors
-
-Errors use a stable `code`, human-readable `message`, `retryable` boolean, and optional structured `details`. See [errors.md](errors.md).
-
-## 17. Atomicity
-
-Where transport and storage support atomic transactions, task state, processing records, result records and publication metadata SHOULD be committed atomically where doing so prevents inconsistent recovery states. Core does not require a distributed transaction.
-
-## 18. Trust and evidence
-
-Agent prose such as “done” or “pushed” is not protocol evidence. AACP state MUST be based on durable protocol records and, where applicable, independently verified transport evidence.
-
-## 19. Extensions
-
-Implementations MAY add project-specific fields and error codes, provided they do not redefine Core semantics or make a valid Core object invalid. Extensions SHOULD be namespaced.
-
-## 20. Conformance
-
-An implementation claiming AACP Core 1.0 compatibility MUST satisfy the normative requirements in this specification and pass the mandatory scenarios in [../04-conformance/scenarios.md](../04-conformance/scenarios.md).
-
-The companion documents in this directory explain individual Core objects and MUST remain consistent with this specification.
+Advanced fault-injection scenarios are test-harness features, not additional protocol requirements.
