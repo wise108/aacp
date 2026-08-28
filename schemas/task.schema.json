@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/wise108/aacp/schemas/task.schema.json",
+  "title": "AACP 1.0 Task",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["task_id", "conversation_id", "status", "state_version"],
+  "properties": {
+    "task_id": {"type": "string", "pattern": "^T-.+"},
+    "conversation_id": {"type": "string", "pattern": "^C-.+"},
+    "status": {"enum": ["PENDING", "IN_PROGRESS", "BLOCKED", "COMPLETED", "FAILED", "CANCELLED"]},
+    "state_version": {"type": "integer", "minimum": 0}
+  }
+}
