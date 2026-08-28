@@ -8,11 +8,11 @@ This document defines the normative lifecycle of an AACP task and the behavior r
 
 ### PENDING
 
-The task has been created by a valid command but execution has not been accepted by a receiver.
+The task has been created by a valid command but execution has not been durably accepted.
 
 ### ACCEPTED
 
-The command has been durably accepted for processing. An ACK has been or can be reconstructed from durable state.
+The command has been durably accepted for processing. A successful ACK establishes this boundary.
 
 ### IN_PROGRESS
 
@@ -20,19 +20,19 @@ Execution has begun.
 
 ### COMPLETED
 
-The task reached its successful terminal state and its required result was durably published.
+The task reached its successful terminal state and its required result was durably recorded. Remote publication of that result is a separate Publication state.
 
 ### FAILED
 
-The task reached a terminal unsuccessful state and its required failure result was durably published.
+The task reached a terminal unsuccessful state and its required failure result/error was durably recorded.
 
 ### CANCELLED
 
-The task was intentionally terminated without successful completion and the cancellation result/state was durably recorded.
+The task was intentionally terminated without successful completion and the cancellation state/result was durably recorded.
 
 ### BLOCKED
 
-Execution cannot proceed because an explicit blocking condition exists. BLOCKED is non-terminal and MUST include a recoverable reason. The task MAY return to IN_PROGRESS when the blocker is resolved.
+Execution cannot proceed because an explicit blocking condition exists. BLOCKED is non-terminal and MUST include a recoverable reason.
 
 ## 3. Normative transitions
 
@@ -43,22 +43,24 @@ Execution cannot proceed because an explicit blocking condition exists. BLOCKED 
 | ACCEPTED | cancel accepted before start | CANCELLED | no execution side effect |
 | IN_PROGRESS | successful completion | COMPLETED | terminal |
 | IN_PROGRESS | unrecoverable task failure | FAILED | terminal |
-| IN_PROGRESS | cancellation accepted | CANCELLED | side-effect semantics must be respected |
+| IN_PROGRESS | cancellation safely accepted | CANCELLED | task-specific semantics apply |
 | IN_PROGRESS | explicit blocker | BLOCKED | non-terminal |
 | BLOCKED | blocker resolved | IN_PROGRESS | resume/retry semantics apply |
 | BLOCKED | cancellation | CANCELLED | terminal |
-| FAILED | explicit retry allowed | IN_PROGRESS | same task, new attempt |
-| PENDING | invalid/rejected command | FAILED | protocol may instead reject before task creation |
+| FAILED | explicit retry allowed | IN_PROGRESS | same task, new execution attempt |
+| PENDING | explicit cancellation | CANCELLED | no execution side effect |
 
-Terminal states (`COMPLETED`, `FAILED`, `CANCELLED`) MUST NOT transition to another state. A new logical operation requires a new command under the task contract.
+A malformed or rejected command is normally rejected before a Task enters the lifecycle. If a Task has already been created and its command is subsequently determined invalid, its handling MUST be explicitly defined by the command contract; implementations MUST NOT invent an implicit transition.
+
+Terminal states (`COMPLETED`, `FAILED`, `CANCELLED`) MUST NOT transition to another state. A new logical operation requires a new task.
 
 ## 4. ACK semantics
 
-ACK establishes acceptance, not completion. An ACK for a command normally causes:
+ACK establishes acceptance, not completion. An accepted command causes:
 
 `PENDING → ACCEPTED`
 
-If the command was already accepted, the receiver returns a duplicate indication and MUST NOT repeat the logical acceptance side effect.
+A duplicate command MUST return duplicate acknowledgement semantics and MUST NOT repeat logical acceptance or execution.
 
 If the receiver cannot durably accept the command, it MUST NOT emit a successful `accepted` ACK.
 
@@ -68,15 +70,15 @@ If the receiver cannot durably accept the command, it MUST NOT emit a successful
 
 `IN_PROGRESS → FAILED` is valid when the failure is terminal under the task contract.
 
-`IN_PROGRESS → CANCELLED` is valid only when cancellation semantics permit the operation to stop safely. A cancellation request is not itself proof that an already-running side effect has been undone.
+`IN_PROGRESS → CANCELLED` is valid only when cancellation semantics permit the operation to stop safely. Receiving a cancellation request is not proof that an already-running side effect has been undone.
 
 ## 6. Retry
 
-A transport retry of an unconfirmed message is a retry of **publication**, not execution. It keeps the original `message_id`.
+A transport retry of an unconfirmed message is a retry of **publication**, not execution. It keeps the original `message_id` and sequence.
 
 A task execution retry after a recoverable failure is a new **attempt** on the same `task_id`. The implementation MUST persist enough attempt information to determine whether a side effect may already have occurred.
 
-A retry MUST NOT be used to bypass terminal state rules. If the task contract permits retry after `FAILED`, that transition is explicit and auditable.
+A retry MUST NOT be used to bypass terminal state rules. Retry from `FAILED` requires an explicit retry policy and creates a new attempt.
 
 ## 7. Timeouts
 
@@ -100,11 +102,11 @@ Recovery reconstructs `ACCEPTED`. The task may proceed to `IN_PROGRESS`.
 
 ### Crash during execution
 
-Recovery MUST treat the execution outcome as potentially unknown. It MUST reconcile durable execution evidence and external side effects before starting another attempt.
+Recovery MUST treat the execution outcome as potentially unknown. It MUST reconcile durable execution evidence and relevant external side effects before starting another attempt.
 
 ### Crash after side effect but before result publication
 
-Recovery MUST NOT repeat the side effect merely because the result is absent. It must reconstruct/publish the result if the outcome can be established.
+Recovery MUST NOT repeat the side effect merely because the result is absent. It must reconstruct and publish the result if the outcome can be established.
 
 ### Crash after result publication
 
@@ -112,7 +114,7 @@ Recovery recognizes the existing result and MUST NOT create a second logical ter
 
 ## 9. Cancellation
 
-Cancellation is a command/event that must itself obey message identity and deduplication.
+Cancellation is a message and MUST obey identity, ordering, and deduplication rules.
 
 Cancellation of `PENDING` or `ACCEPTED` work can normally transition directly to `CANCELLED`.
 
@@ -131,22 +133,22 @@ WHERE task_id = T
   AND state_version = EXPECTED
 ```
 
-If zero rows are updated because the expected version is stale, the operation fails with `STATE_CONFLICT`. The agent MUST reload authoritative state and reconcile; it MUST NOT overwrite the newer state.
+If zero rows are updated because the expected version is stale, the operation fails with `STATE_CONFLICT`. The agent MUST reload authoritative state and reconcile; it MUST NOT overwrite newer state.
 
 ## 11. Duplicate messages
 
-Duplicate commands, ACKs, progress events, cancellation requests, and results are detected by immutable message identity and relevant correlation/task constraints.
+Duplicate commands, ACKs, events, cancellation requests, and results are detected by immutable message identity and relevant correlation/task constraints.
 
 A duplicate command MUST NOT start a second logical execution.
 
 A duplicate cancellation MUST NOT move a terminal task to another state.
 
-A duplicate result MUST be treated as already published when it has the same immutable message identity.
+A duplicate result with the same message identity is already published/known and MUST NOT create another logical terminal result.
 
 ## 12. State invariants
 
 1. Terminal states are immutable.
-2. Every state transition is attributable to an AACP event/message or an explicitly recorded internal execution event.
+2. Every state transition is attributable to an AACP message/event or explicitly recorded internal execution event.
 3. `state_version` increases exactly once per successful mutable state transition.
 4. A stale writer cannot overwrite newer state.
 5. ACK never means completion.
@@ -155,37 +157,23 @@ A duplicate result MUST be treated as already published when it has the same imm
 8. A missing result does not imply missing execution.
 9. A duplicate command does not imply a second execution.
 10. Recovery is idempotent.
+11. Task state and result Publication state are independent.
 
 ## 13. Canonical lifecycle
 
 ```text
-             ┌───────────────┐
-             │    PENDING    │
-             └───────┬───────┘
-                     │ accept
-                     ▼
-             ┌───────────────┐
-             │   ACCEPTED    │
-             └───────┬───────┘
-                     │ start
-                     ▼
-             ┌───────────────┐
-       ┌────►│  IN_PROGRESS  │◄────┐
-       │     └───┬────┬───┬──┘     │
-       │         │    │   │        │
-       │ blocker │    │   │ retry  │ resolve
-       │         │    │   │        │
-       │         ▼    ▼   ▼        │
-       │      BLOCKED FAILED       │
-       │         │          │      │
-       │         └──────────┘      │
-       │                           │
-       └───────────────────────────┘
+PENDING
+   │ accept
+   ▼
+ACCEPTED
+   │ start
+   ▼
+IN_PROGRESS
+   ├── success ──► COMPLETED
+   ├── failure ──► FAILED ── retry policy ──► IN_PROGRESS
+   ├── cancel ───► CANCELLED
+   └── blocker ──► BLOCKED ── resolve ──► IN_PROGRESS
 
-IN_PROGRESS ──success──► COMPLETED
-IN_PROGRESS ──cancel───► CANCELLED
-ACCEPTED ────cancel────► CANCELLED
-PENDING ─────cancel────► CANCELLED
+PENDING ── cancel ──► CANCELLED
+ACCEPTED ─ cancel ──► CANCELLED
 ```
-
-`FAILED` may re-enter `IN_PROGRESS` only through an explicit retry policy. `BLOCKED` may return to `IN_PROGRESS` when its blocker is resolved.
