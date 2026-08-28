@@ -24,13 +24,17 @@ Every AACP message MUST contain `protocol`, `version`, `message_id`, `task_id`, 
 
 `correlation_id` and `causation_id` MAY be supplied as optional metadata.
 
+`created_at` MUST be an RFC 3339 timestamp in UTC. Receivers MUST reject malformed timestamps.
+
 ## 6. Streams and ordering
 
-An ordered message stream is identified by `(conversation_id, sender, recipient)`. Sequence numbers are scoped to that stream and start at 1. Within a stream they MUST increase by exactly 1 for each message.
+An ordered message stream is identified by `(conversation_id, sender, recipient)`. Sequence numbers are scoped to that stream and start at 1. Within a stream they MUST increase by exactly 1 for each newly created message.
 
 A receiver MUST detect a missing sequence. Under strict ordering it MUST NOT silently process a later message while an earlier sequence is missing. It SHOULD retain the later message and report `SEQUENCE_GAP`.
 
 A receiver MAY support unordered processing for explicitly declared streams. In that case sequence numbers remain evidence of sender ordering but do not impose a processing barrier.
+
+A retransmission of an existing message MUST reuse the original `message_id` and sequence; it MUST NOT consume a new sequence number.
 
 ## 7. Delivery and idempotency
 
