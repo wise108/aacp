@@ -4,8 +4,8 @@ from .model import Message
 from .transport import CrashInjected, DeterministicTransport, Fault, FaultKind
 
 
-def msg(mid="M-1", seq=1):
-    return Message(mid, "T-1", "command", seq)
+def msg(mid="M-1"):
+    return Message(mid, "T-1", "command")
 
 
 def test_drop_is_deterministic():
