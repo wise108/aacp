@@ -1,11 +1,18 @@
 # AACP 1.0 Conformance Requirements
 
-An implementation may claim AACP Core 1.0 compatibility only if it satisfies every normative `MUST` and `MUST NOT` requirement in the Core specification and passes all mandatory scenarios in [scenarios.md](scenarios.md).
+An implementation may claim AACP Core 1.0 compatibility when it satisfies every normative `MUST` and `MUST NOT` in the Core specification.
 
-The normative requirements are mapped to observable tests in the [Conformance Matrix](matrix.md).
+The minimum conformance properties are:
 
-`SHOULD` and `SHOULD NOT` requirements are recommended rather than mandatory for Core conformance. An implementation that deviates from one MUST document the deviation and its rationale; such deviations MUST NOT change Core semantics.
+1. immutable unique message identity;
+2. safe duplicate command handling;
+3. accepted/rejected/duplicate ACK semantics;
+4. valid task lifecycle enforcement;
+5. no stale state overwrite;
+6. safe restart behavior for uncertain execution.
 
-Transport profiles add their own requirements. Passing a transport profile does not permit an implementation to violate Core semantics.
+The [Conformance Matrix](matrix.md) maps these properties to observable tests.
 
-Conformance tests SHOULD be automated where practical and SHOULD include process interruption, duplicate delivery, transport failure and concurrent state mutation.
+The S01–S20 scenario catalogue is a broader test suite. It is recommended for robust implementations, but advanced fault-injection coverage is not itself an additional Core protocol requirement.
+
+Transport profiles may add requirements but MUST NOT change Core semantics.
