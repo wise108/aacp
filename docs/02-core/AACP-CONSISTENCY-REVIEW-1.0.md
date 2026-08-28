@@ -2,44 +2,24 @@
 
 ## Scope
 
-Reviewed the normative Core specification, Message & Identity Model, Task State Machine, Envelope schema, ACK schema, Result schema, Runtime Contract, and Conformance Checklist as one protocol.
+The normative Core specification, schemas, state machine, identity model, result/error semantics, adoption contract and conformance requirements are reviewed as one protocol.
 
-## Findings and resolutions
+## Canonical decisions
 
-### 1. ACCEPTED state was missing from Core
+1. `ACCEPTED` is the durable acknowledgement boundary between `PENDING` and execution.
+2. ACK vocabulary is `accepted`, `rejected`, `duplicate`.
+3. `message_id` is immutable message identity and the idempotency key for retransmission.
+4. `task_id` identifies the logical unit of work and may remain stable across an explicit execution retry.
+5. `sequence` is optional Core metadata. Ordered delivery is a transport/profile concern.
+6. `stream_id` is optional Core metadata and is not required for every AACP message.
+7. Progress information is represented by `event`; Core does not define a separate `progress` message type.
+8. `publication` is not an AACP Core concept. Transport-specific delivery, artifact publication and verification belong outside Core.
+9. Core does not require brokers, distributed transactions, heartbeats, attempt ledgers or other infrastructure machinery.
+10. Uncertain execution must be reconciled before retry; missing ACK or result is not evidence that execution did not happen.
+11. Mutable task state uses optimistic concurrency; stale mutations must not overwrite newer state.
 
-The Task State Machine defined `ACCEPTED`, while Core did not. Core now includes `ACCEPTED` as the durable acknowledgement boundary.
+## Consistency result
 
-### 2. ACK vocabulary differed between Core and schema
-
-Core required `received`, `rejected`, `duplicate`; the schema allowed `accepted`, `duplicate`. The canonical vocabulary is now `accepted`, `rejected`, `duplicate`.
-
-### 3. stream_id was referenced but absent from the envelope
-
-Ordering is explicitly scoped to `(conversation_id, stream_id)`. `stream_id` is now mandatory in the Core envelope contract.
-
-### 4. Message type vocabulary differed
-
-The identity model used `progress`; Core used `event`. AACP 1.0 keeps the Core set: `command`, `ack`, `result`, `error`, `cancel`, `event`. Progress is represented as an `event` payload.
-
-### 5. PENDING invalid-command transition was ambiguous
-
-The Task State Machine no longer invents an implicit `PENDING → FAILED` transition for malformed/rejected commands. Rejection normally occurs before a Task enters the lifecycle. Existing Tasks require an explicit task contract.
-
-### 6. Task completion and publication were conflated
-
-The state model now explicitly separates `task.status=COMPLETED` from `publication.status=PUBLISHED`.
-
-### 7. Sequence semantics were clarified
-
-Sequence belongs to a stream, not a task or message lifecycle. Retransmission reuses both message ID and sequence. ACK/RESULT consume sequence numbers if they are members of the ordered stream.
-
-## Remaining implementation requirements
-
-The specification is now internally aligned at the document level, but implementation conformance still requires executable schema validation and mandatory failure/recovery scenarios.
-
-## Review status
+The documents and schemas must express only the decisions above. Any transport-specific or project-specific behavior must be documented outside Core and must not redefine these semantics.
 
 **DOCUMENT CONSISTENCY: PASS**
-
-This review does not declare any implementation AACP-conformant. Conformance requires the executable checklist and scenario suite.
