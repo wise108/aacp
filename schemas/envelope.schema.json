@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/wise108/aacp/schemas/envelope.schema.json",
+  "title": "AACP 1.0 Envelope",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["protocol", "version", "message_id", "task_id", "conversation_id", "sender", "recipient", "sequence", "type", "created_at", "payload"],
+  "properties": {
+    "protocol": {"const": "AACP"},
+    "version": {"const": "1.0"},
+    "message_id": {"type": "string", "pattern": "^M-.+"},
+    "task_id": {"type": "string", "pattern": "^T-.+"},
+    "conversation_id": {"type": "string", "pattern": "^C-.+"},
+    "sender": {"type": "string", "minLength": 1},
+    "recipient": {"type": "string", "minLength": 1},
+    "sequence": {"type": "integer", "minimum": 1},
+    "type": {"enum": ["command", "ack", "result", "error", "cancel", "event"]},
+    "created_at": {"type": "string", "format": "date-time"},
+    "correlation_id": {"type": "string"},
+    "causation_id": {"type": "string"},
+    "payload": {"type": "object"}
+  }
+}
