@@ -1,44 +1,41 @@
 # AACP — Agent-to-Agent Collaboration Protocol
 
-AACP (Agent-to-Agent Collaboration Protocol) is a small, transport-independent protocol for reliable task coordination between software agents.
+AACP is a small, transport-independent protocol for reliable task coordination between software agents.
 
-## Scope
+## What AACP solves
 
-AACP defines:
+AACP defines a durable contract for:
 
 - task identity and lifecycle;
 - ordered messages;
 - idempotent processing;
 - acknowledgements;
-- optimistic concurrency for task state;
+- optimistic concurrency;
 - results and evidence;
 - publication state;
 - crash recovery and heartbeat semantics;
-- a conformance test model.
+- conformance testing.
 
-AACP does **not** define an LLM, agent runtime, Telegram integration, Cursor ACP, MCP, or a particular transport. Those belong to implementations and transport adapters.
+## What AACP does not solve
 
-## Version
+AACP does **not** define an LLM, agent runtime, Telegram integration, Cursor ACP, MCP, or a mandatory transport. Those belong to implementations and transport profiles.
 
-This repository contains the normative AACP Core 1.0 specification.
+## Documentation
+
+Start here:
+
+- [Architecture](docs/01-overview/architecture.md)
+- [Terminology](docs/01-overview/terminology.md)
+- [AACP Core 1.0](docs/02-core/specification.md)
+- [Transport profiles](docs/03-transports/)
+- [Conformance](docs/04-conformance/requirements.md)
+- [Machine-readable schemas](schemas/)
+
+The repository-level [SPEC.md](SPEC.md) is currently the authoritative normative Core document while the modular documentation is being consolidated.
 
 ## Design principle
 
 > AACP describes reliable state and communication between agents; it does not prescribe how an agent performs its internal work.
-
-## Documents
-
-- [SPEC.md](SPEC.md) — normative Core 1.0 specification
-- [core/envelope.md](core/envelope.md) — message envelope
-- [core/task.md](core/task.md) — task model and lifecycle
-- [core/message.md](core/message.md) — messages, ordering and idempotency
-- [core/result.md](core/result.md) — results and evidence
-- [core/publication.md](core/publication.md) — publication semantics
-- [core/errors.md](core/errors.md) — error model and registry
-- [state-machine/task.md](state-machine/task.md) — state machine
-- [transports/github.md](transports/github.md) — GitHub transport profile
-- [conformance/scenarios.md](conformance/scenarios.md) — mandatory reliability scenarios
-- [schemas/](schemas/) — machine-readable JSON Schemas
 
 ## Status
 
