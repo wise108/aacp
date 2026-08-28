@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/wise108/aacp/schemas/error.schema.json",
+  "title": "AACP 1.0 Error",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["code", "message", "retryable"],
+  "properties": {
+    "code": {"type": "string", "minLength": 1},
+    "message": {"type": "string", "minLength": 1},
+    "retryable": {"type": "boolean"},
+    "details": {"type": "object"}
+  }
+}
