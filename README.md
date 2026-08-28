@@ -31,7 +31,7 @@ Start here:
 - [Conformance](docs/04-conformance/requirements.md)
 - [Machine-readable schemas](schemas/)
 
-The repository-level [SPEC.md](SPEC.md) is currently the authoritative normative Core document while the modular documentation is being consolidated.
+All human-readable protocol documentation is under `docs/`. Machine-readable schemas remain at repository root as implementation artifacts.
 
 ## Design principle
 
