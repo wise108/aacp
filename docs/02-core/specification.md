@@ -16,23 +16,23 @@ AACP 1.0 defines six normative objects: Envelope, Task, Message, Result, Publica
 
 ## 4. Identity
 
-Identifiers use prefixes `C-`, `T-`, and `M-` followed by a globally unique identifier such as a ULID. `conversation_id` identifies a logical collaboration conversation; `task_id` identifies a unit of work; `message_id` identifies one message and is its idempotency key.
+Identifiers use prefixes `C-`, `T-`, and `M-` followed by a globally unique identifier such as a ULID. `conversation_id` identifies a logical collaboration conversation; `task_id` identifies a unit of work; `message_id` identifies one immutable message and is its idempotency key.
 
 ## 5. Envelope
 
-Every AACP message MUST contain `protocol`, `version`, `message_id`, `task_id`, `conversation_id`, `sender`, `recipient`, `sequence`, `type`, `created_at`, and `payload`. Message types are `command`, `ack`, `result`, `error`, `cancel`, and `event`.
+Every AACP message MUST contain `protocol`, `version`, `message_id`, `task_id`, `conversation_id`, `stream_id`, `sender`, `recipient`, `sequence`, `type`, `created_at`, and `payload`. Message types are `command`, `ack`, `result`, `error`, `cancel`, and `event`.
 
-`correlation_id` and `causation_id` MAY be supplied as optional metadata.
+`correlation_id` and `causation_id` MAY be supplied as optional metadata. `stream_id` is an explicit logical stream identifier; it is required because ordering is scoped to a stream.
 
 `created_at` MUST be an RFC 3339 timestamp in UTC. Receivers MUST reject malformed timestamps.
 
 ## 6. Streams and ordering
 
-An ordered message stream is identified by `(conversation_id, sender, recipient)`. Sequence numbers are scoped to that stream and start at 1. Within a stream they MUST increase by exactly 1 for each newly created message.
+An ordered stream is identified by `(conversation_id, stream_id)`. The stream has an explicit direction/participant binding established by the transport/session context. Sequence numbers are scoped to that stream and start at 1. Within an ordered stream they MUST increase by exactly 1 for each newly created message.
 
 A receiver MUST detect a missing sequence. Under strict ordering it MUST NOT silently process a later message while an earlier sequence is missing. It SHOULD retain the later message and report `SEQUENCE_GAP`.
 
-A receiver MAY support unordered processing for explicitly declared streams. In that case sequence numbers remain evidence of sender ordering but do not impose a processing barrier.
+A receiver MAY support unordered processing for explicitly declared streams. In that case sequence numbers MUST NOT impose a processing barrier.
 
 A retransmission of an existing message MUST reuse the original `message_id` and sequence; it MUST NOT consume a new sequence number.
 
@@ -42,13 +42,11 @@ AACP Core uses **at-least-once delivery semantics**. A sender MAY retransmit a m
 
 `message_id` is the idempotency key. A receiver claiming crash-safe duplicate suppression MUST durably record sufficient processing state before acknowledging a command, or use a command handler whose side effect is independently idempotent.
 
-A duplicate command MUST NOT execute its side effect more than once when the implementation claims AACP command idempotency. An implementation MUST NOT claim effectively-once command execution unless it has a durable processing record or independently idempotent side effect.
-
-AACP does NOT provide exactly-once network delivery. The combination of at-least-once delivery and idempotent command processing is the Core reliability model.
+A duplicate command MUST NOT execute its side effect more than once when the implementation claims AACP command idempotency. AACP does NOT provide exactly-once network delivery.
 
 ## 8. Task lifecycle
 
-Task statuses are `PENDING`, `IN_PROGRESS`, `BLOCKED`, `COMPLETED`, `FAILED`, and `CANCELLED`. Implementations MUST enforce valid state transitions and MUST reject invalid transitions.
+Task statuses are `PENDING`, `ACCEPTED`, `IN_PROGRESS`, `BLOCKED`, `COMPLETED`, `FAILED`, and `CANCELLED`. `ACCEPTED` is the durable acknowledgement boundary between receipt and execution. Implementations MUST enforce valid state transitions and MUST reject invalid transitions. See [AACP-TASK-STATE-MACHINE.md](AACP-TASK-STATE-MACHINE.md).
 
 ## 9. Optimistic concurrency
 
@@ -56,9 +54,9 @@ A Task MUST contain `state_version`. State mutation MUST use an expected version
 
 ## 10. Acknowledgement
 
-A receiver MUST send an `ack` for a received `command` unless the transport profile explicitly defines an equivalent reliable receipt mechanism. ACK status MUST distinguish at least `received`, `rejected`, and `duplicate`.
+A receiver MUST send an `ack` for a received `command` unless the transport profile explicitly defines an equivalent reliable receipt mechanism. ACK status MUST distinguish at least `accepted`, `rejected`, and `duplicate`.
 
-`received` means the message passed protocol validation and has been durably accepted for processing; it does NOT mean the task completed.
+`accepted` means the message passed protocol validation and has been durably accepted for processing; it does NOT mean the task completed.
 
 `rejected` means the message will not be processed. The receiver SHOULD provide an error code/reason.
 
@@ -88,7 +86,7 @@ An implementation MUST NOT re-execute a command solely because an ACK or RESULT 
 
 ## 14. Heartbeat
 
-Long-running `IN_PROGRESS` tasks SHOULD update `heartbeat_at`. A stale heartbeat MAY trigger recovery. `STALE` is a diagnostic/recovery condition, not a Core Task status. Recovery MAY return a stale task to `PENDING` or otherwise reassign it, subject to implementation ownership rules.
+Long-running `IN_PROGRESS` tasks SHOULD update `heartbeat_at`. A stale heartbeat MAY trigger recovery. `STALE` is a diagnostic/recovery condition, not a Core Task status.
 
 ## 15. Cancellation
 
