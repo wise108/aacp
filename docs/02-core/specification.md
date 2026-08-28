@@ -32,13 +32,15 @@ A receiver MUST detect a missing sequence. Under strict ordering it MUST NOT sil
 
 A receiver MAY support unordered processing for explicitly declared streams. In that case sequence numbers remain evidence of sender ordering but do not impose a processing barrier.
 
-## 7. Idempotency and delivery
+## 7. Delivery and idempotency
 
-`message_id` is the idempotency key. A receiver MUST durably record receipt/processing state before acknowledging a command when the implementation claims at-most-once command execution across crashes.
+AACP Core uses **at-least-once delivery semantics**. A sender MAY retransmit a message when delivery or acknowledgement is uncertain. Receivers MUST therefore be idempotent for commands.
 
-A duplicate command MUST NOT execute its side effect more than once. This guarantee requires either a durable inbox/processed-message record tied atomically to execution, or an idempotent command handler. An implementation MUST NOT claim this guarantee if it cannot provide one of these mechanisms.
+`message_id` is the idempotency key. A receiver claiming crash-safe duplicate suppression MUST durably record sufficient processing state before acknowledging a command, or use a command handler whose side effect is independently idempotent.
 
-A lost ACK or RESULT MUST therefore be recoverable by retransmission without duplicate side effects.
+A duplicate command MUST NOT execute its side effect more than once when the implementation claims AACP command idempotency. An implementation MUST NOT claim effectively-once command execution unless it has a durable processing record or independently idempotent side effect.
+
+AACP does NOT provide exactly-once network delivery. The combination of at-least-once delivery and idempotent command processing is the Core reliability model.
 
 ## 8. Task lifecycle
 
