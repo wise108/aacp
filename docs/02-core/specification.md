@@ -70,7 +70,9 @@ A Result MUST NOT be interpreted as proof that it is remotely available.
 
 Publication describes whether a Result is available to the remote participant through the selected transport. Publication status is `PENDING`, `PUBLISHED`, or `FAILED`.
 
-`task.status: COMPLETED` and `publication.status: PUBLISHED` are independent facts. For a transport that supports remote verification, `PUBLISHED` MUST only be set after the transport confirms that the referenced result is available remotely.
+`task.status: COMPLETED` and `publication.status: PUBLISHED` are independent facts. For a transport that supports remote verification, `PUBLISHED` MUST only be set after the transport confirms that the referenced Result is available remotely.
+
+If publication succeeds remotely but the process crashes before local publication state is persisted, recovery MUST verify the remote artifact and reconcile local state to `PUBLISHED`. Publication reconciliation MUST NOT re-execute the Task.
 
 ## 13. Failure and recovery
 
@@ -84,7 +86,13 @@ Long-running `IN_PROGRESS` tasks SHOULD update `heartbeat_at`. A stale heartbeat
 
 ## 15. Cancellation
 
-A `cancel` message requests cancellation of a task. Cancellation MUST respect the current task version and MUST NOT silently change a terminal task (`COMPLETED`, `FAILED`, `CANCELLED`).
+A `cancel` message requests cancellation of a task. Cancellation MUST use optimistic concurrency with the current `state_version`.
+
+If a cancellation request is based on version N and another valid mutation changes the task to version N+1 before cancellation commits, cancellation MUST fail with `STATE_CONFLICT` and MUST NOT overwrite the newer state.
+
+If the task is already terminal (`COMPLETED`, `FAILED`, or `CANCELLED`), cancellation MUST NOT change its state. The implementation SHOULD return the current terminal state as the authoritative outcome.
+
+Therefore, in a completion/cancellation race, the first successfully committed state transition wins; a stale concurrent operation loses with `STATE_CONFLICT`.
 
 ## 16. Errors
 
