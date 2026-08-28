@@ -1,19 +1,14 @@
 {
   "$schema":"https://json-schema.org/draft/2020-12/schema",
   "$id":"https://github.com/wise108/aacp/schemas/ack.schema.json",
-  "title":"AACP ACK",
+  "title":"AACP 1.0 ACK",
   "type":"object",
-  "additionalProperties":false,
-  "required":["message_id","task_id","conversation_id","sender","recipient","sequence","type","created_at","payload"],
+  "additionalProperties":true,
+  "required":["task_id","status"],
   "properties":{
-    "message_id":{"type":"string","pattern":"^M-.+"},
     "task_id":{"type":"string","pattern":"^T-.+"},
-    "conversation_id":{"type":"string","pattern":"^C-.+"},
-    "sender":{"type":"string","minLength":1},
-    "recipient":{"type":"string","minLength":1},
-    "sequence":{"type":"integer","minimum":1},
-    "type":{"const":"ack"},
-    "created_at":{"type":"string","format":"date-time"},
-    "payload":{"type":"object","required":["status"],"properties":{"status":{"enum":["accepted","duplicate"]}}}
+    "status":{"enum":["accepted","rejected","duplicate"]},
+    "error_code":{"type":"string"},
+    "reason":{"type":"string"}
   }
 }
