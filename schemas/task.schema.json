@@ -6,9 +6,9 @@
   "additionalProperties": true,
   "required": ["task_id", "conversation_id", "status", "state_version"],
   "properties": {
-    "task_id": {"type": "string", "pattern": "^T-.+"},
-    "conversation_id": {"type": "string", "pattern": "^C-.+"},
-    "status": {"enum": ["PENDING", "IN_PROGRESS", "BLOCKED", "COMPLETED", "FAILED", "CANCELLED"]},
+    "task_id": {"type": "string", "minLength": 1},
+    "conversation_id": {"type": "string", "minLength": 1},
+    "status": {"enum": ["PENDING", "ACCEPTED", "IN_PROGRESS", "BLOCKED", "COMPLETED", "FAILED", "CANCELLED"]},
     "state_version": {"type": "integer", "minimum": 0}
   }
 }
