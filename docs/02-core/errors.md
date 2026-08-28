@@ -1,9 +1,17 @@
-# AACP Errors 1.0
+# AACP 1.0 Errors
 
-Every protocol error MUST provide a stable `code`, human-readable `message`, `retryable` boolean, and optional structured `details`.
+Errors are machine-readable protocol outcomes. Project-specific diagnostic details MAY be carried in `payload`.
 
-Core codes include `INVALID_MESSAGE`, `UNSUPPORTED_VERSION`, `UNKNOWN_TASK`, `INVALID_STATE_TRANSITION`, `STATE_CONFLICT`, `SEQUENCE_GAP`, `DUPLICATE_MESSAGE`, `NOT_AUTHORIZED`, `TASK_BLOCKED`, `TASK_FAILED`, `TASK_CANCELLED`, `PUBLICATION_FAILED`, `TRANSPORT_UNAVAILABLE`, and `INTERNAL_ERROR`.
+Core implementations SHOULD distinguish at least:
 
-Implementations MAY define namespaced extension codes without changing Core semantics.
+- `INVALID_MESSAGE` — envelope or required field is invalid;
+- `UNSUPPORTED_VERSION` — protocol version is unsupported;
+- `REJECTED` — command is valid but will not be accepted;
+- `DUPLICATE` — message identity has already been accepted/processed;
+- `STATE_CONFLICT` — stale state mutation was rejected;
+- `EXECUTION_FAILED` — task execution failed;
+- `CANCEL_REJECTED` — requested cancellation could not be safely applied.
 
-See [SPEC.md](../../SPEC.md) for the authoritative normative requirements.
+Transport-specific failures are not task failures unless the task contract says otherwise.
+
+Core does not define a `PUBLICATION_FAILED` error because publication is not a Core concept.
