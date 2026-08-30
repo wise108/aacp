@@ -18,7 +18,9 @@ Message types are: `command`, `ack`, `result`, `error`, `cancel`, `event`.
 
 Optional fields are `correlation_id`, `causation_id`, `sequence`, and `stream_id`.
 
-`sequence` and `stream_id` are used only when ordering is required by a transport profile. Retransmission reuses the original sequence.
+`sequence` and `stream_id` are transport-profile metadata used only when ordering is required. Core does not define their allocation, uniqueness, monotonicity, gap handling, or concurrency semantics. A transport profile that uses sequence for ordered discovery MUST define those semantics explicitly.
+
+When a transport profile defines sequence ordering, retransmission of the same message MUST reuse the original sequence, when present. A consumer MUST NOT use sequence as a message identity unless the applicable transport profile explicitly guarantees that property.
 
 ## Identity and delivery
 
