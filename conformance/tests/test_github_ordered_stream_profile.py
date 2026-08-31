@@ -78,6 +78,7 @@ def test_g6_restart_rediscovery_does_not_cross_unresolved_collision() -> None:
     assert restarted.observe(durable[1]) == "new"
     with pytest.raises(OrderingConflict):
         restarted.observe(durable[2])
+    assert restarted.unresolved_sequence == 35
     assert restarted.cursor_sequence == 35
     assert restarted.cursor_message_id == "M-A"
     assert durable[1:] == [msg("M-A", 35), msg("M-B", 35)]
@@ -112,5 +113,6 @@ def test_g10_unresolved_collision_blocks_cursor_progression() -> None:
     consumer.observe(msg("M-A", 35))
     with pytest.raises(OrderingConflict):
         consumer.observe(msg("M-B", 35))
+    assert consumer.unresolved_sequence == 35
     assert consumer.cursor_sequence == 35
     assert consumer.cursor_message_id == "M-A"
