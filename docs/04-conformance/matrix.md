@@ -11,6 +11,12 @@ This matrix maps the six minimum Core conformance properties to observable tests
 | CORE-05 | No stale state overwrite | Two writers mutate the same task version | One commit wins; stale mutation receives `STATE_CONFLICT` and cannot overwrite newer state |
 | CORE-06 | Safe recovery after uncertain execution | Execute, lose acknowledgement/result, restart and retry | Recovery reconciles durable state and does not blindly repeat uncertain side effects |
 
+## Transport-profile conformance
+
+Core conformance and transport-profile conformance are separate claims.
+
+For implementations using the GitHub Transport 1.0 profile, apply the additional mandatory matrix in [`github-transport.md`](github-transport.md). In particular, an ordered GitHub stream MUST demonstrate canonical-state allocation, stale-writer rejection, collision detection, immutable reconciliation, safe continuation, and restart rediscovery.
+
 ## Recommended extended tests
 
 Implementations SHOULD additionally test transport loss, duplicate delivery, crash points, ordering where a transport profile defines ordering, cancellation races, schema validation and extension isolation.
@@ -20,3 +26,5 @@ These tests are useful engineering coverage, but they are not additional Core se
 ## Conformance result
 
 An implementation may claim **AACP Core 1.0 conformance** only when all six Core properties pass and no implementation-specific exception changes Core semantics.
+
+An implementation using a transport profile may additionally claim profile conformance only when every normative requirement of that profile and its applicable profile-conformance matrix passes.
