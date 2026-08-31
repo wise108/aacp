@@ -125,24 +125,23 @@ The agent SHOULD publish or return an auditable report containing:
 - whether execution was performed, skipped, or remains uncertain;
 - conformance checks performed.
 
-## Ready-to-use prompt for the protocol-enabled assistant repository
+## Ready-to-use universal agent prompt
 
 ```text
 RECOVERY TASK — AACP GITHUB ORDERED STREAM
 
-You are the protocol-enabled agent responsible for the repository:
-https://github.com/wise108/vadim-baranov-assistant
+You are an agent operating under AACP in an existing project/repository.
 
-This repository is configured to communicate according to AACP. Do NOT invent or introduce another communication protocol.
+The current project, repository, transport, conversation, and stream are determined by the project context. Do NOT hard-code or assume a specific repository, organization, branch, conversation_id, stream_id, or transport location unless it is explicitly provided by the project.
 
 Canonical AACP protocol:
-https://github.com/wise108/aacp
+< AACP_PROTOCOL_LOCATION >
 
 Read these documents BEFORE changing anything:
-1. https://github.com/wise108/aacp/blob/main/docs/02-core/specification.md
-2. https://github.com/wise108/aacp/blob/main/docs/03-transports/github.md
-3. https://github.com/wise108/aacp/blob/main/docs/07-agent-adoption/AACP-GITHUB-ORDERED-STREAM-RECOVERY.md
-4. The repository's own AACP/protocol instructions and relevant project governance documents.
+1. < AACP_CORE_SPECIFICATION >
+2. < AACP_TRANSPORT_PROFILE >
+3. < AACP_RECOVERY_PROCEDURE >
+4. The target project's own AACP/protocol instructions and relevant governance documents.
 
 Your task is to recover the existing AACP dialogue/transport state and then resume normal protocol-driven work. You are NOT being asked to modify AACP itself.
 
@@ -152,14 +151,14 @@ Recovery rules:
 - Do not invent sequence numbers from local state.
 - Treat canonical remote state as authoritative.
 - Use message_id for identity and deduplication; sequence is ordering metadata only.
-- If two different message_ids occupy one sequence in the same (conversation_id, stream_id), classify it as ORDERING_CONFLICT, preserve both records, stop ordered processing beyond the ambiguity, and reconcile before continuing.
+- If two different message_ids occupy one sequence in the same (conversation_id, stream_id), classify it as ORDERING_CONFLICT, preserve all records, stop ordered processing beyond the ambiguity, and reconcile before continuing.
 - Distinguish ORDERING_CONFLICT from SEQUENCE_GAP and stale publication.
 - Do not execute an uncertain command merely because an ACK or RESULT is missing.
 - Do not create a parallel protocol or bypass AACP.
 - Do not modify the AACP specification during this recovery task.
 
 Your first action is READ-ONLY DIAGNOSTICS. Determine:
-1. how this repository is configured to consume/emit AACP messages;
+1. how this project is configured to consume/emit AACP messages;
 2. the canonical remote transport/dialogue location and current commit/ref;
 3. conversation_id and stream_id;
 4. complete relevant ordered-stream history;
@@ -198,4 +197,4 @@ Final report MUST include:
 - commit SHA and push verification.
 ```
 
-The prompt is an operational invocation of this procedure for `vadim-baranov-assistant`. It is not a replacement for the normative AACP specifications.
+The prompt is a universal operational invocation of this procedure. Concrete project values MUST be supplied by the target project or its operator and MUST NOT be embedded in the AACP specification.
