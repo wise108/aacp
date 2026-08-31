@@ -8,6 +8,7 @@ from conformance.harness.ordering import (
     SequenceAllocator,
     SequenceGap,
     StaleAllocation,
+    reconcile_collision,
 )
 
 
@@ -103,4 +104,13 @@ def test_historical_collision_is_immutable_and_detectable() -> None:
     consumer.observe(msg("M-before", 34))
     with pytest.raises(OrderingConflict):
         consumer.observe(records[0])
+    assert records == [msg("M1", 35), msg("M2", 35)]
+
+
+def test_collision_reconciliation_preserves_ids_and_allocates_after_canonical_max() -> None:
+    records = [msg("M1", 35), msg("M2", 35)]
+    result = reconcile_collision(records, canonical_max_sequence=37)
+    assert result.conflict_sequence == 35
+    assert result.message_ids == ("M1", "M2")
+    assert result.next_sequence == 38
     assert records == [msg("M1", 35), msg("M2", 35)]
