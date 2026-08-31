@@ -48,8 +48,9 @@ def test_g3_historical_collision_is_detected_and_preserved() -> None:
     with pytest.raises(OrderingConflict):
         consumer.observe(records[1])
     assert records == [msg("M-A", 35), msg("M-B", 35)]
-    assert consumer.cursor_sequence == 35
-    assert consumer.cursor_message_id == "M-A"
+    assert consumer.cursor_sequence == 34
+    assert consumer.cursor_message_id == "M-34"
+    assert consumer.unresolved_sequence == 35
 
 
 def test_g4_collision_reconciliation_preserves_history_and_selects_next_sequence() -> None:
@@ -79,8 +80,8 @@ def test_g6_restart_rediscovery_does_not_cross_unresolved_collision() -> None:
     with pytest.raises(OrderingConflict):
         restarted.observe(durable[2])
     assert restarted.unresolved_sequence == 35
-    assert restarted.cursor_sequence == 35
-    assert restarted.cursor_message_id == "M-A"
+    assert restarted.cursor_sequence == 34
+    assert restarted.cursor_message_id == "M-34"
     assert durable[1:] == [msg("M-A", 35), msg("M-B", 35)]
 
 
@@ -114,5 +115,5 @@ def test_g10_unresolved_collision_blocks_cursor_progression() -> None:
     with pytest.raises(OrderingConflict):
         consumer.observe(msg("M-B", 35))
     assert consumer.unresolved_sequence == 35
-    assert consumer.cursor_sequence == 35
-    assert consumer.cursor_message_id == "M-A"
+    assert consumer.cursor_sequence == 34
+    assert consumer.cursor_message_id == "M-34"
