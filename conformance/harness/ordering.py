@@ -1,5 +1,6 @@
 """Deterministic ordered-stream model for AACP transport conformance."""
 from dataclasses import dataclass
+from enum import Enum
 
 
 class OrderingConflict(Exception):
@@ -12,6 +13,22 @@ class SequenceGap(Exception):
 
 class StaleAllocation(Exception):
     pass
+
+
+class PublicationState(str, Enum):
+    LOCAL_ONLY = "LOCAL_ONLY"
+    PUBLISHED = "PUBLISHED"
+
+
+class OrderabilityState(str, Enum):
+    ORDERABLE = "ORDERABLE"
+    NON_ORDERABLE = "NON_ORDERABLE"
+
+
+class ExecutionState(str, Enum):
+    EXECUTED = "EXECUTED"
+    NOT_EXECUTED = "NOT_EXECUTED"
+    UNKNOWN = "UNKNOWN"
 
 
 @dataclass(frozen=True)
