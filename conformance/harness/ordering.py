@@ -101,6 +101,7 @@ class OrderedConsumer:
         self.cursor_message_id: str | None = None
         self.seen: set[str] = set()
         self.by_sequence: dict[int, str] = {}
+        self.unresolved_sequence: int | None = None
 
     def observe(self, message: OrderedMessage) -> str:
         if message.message_id in self.seen:
@@ -108,6 +109,7 @@ class OrderedConsumer:
 
         existing = self.by_sequence.get(message.sequence)
         if existing is not None and existing != message.message_id:
+            self.unresolved_sequence = message.sequence
             raise OrderingConflict(message.sequence)
 
         if message.sequence > self.cursor_sequence + 1:
