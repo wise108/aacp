@@ -12,6 +12,7 @@
 - Strengthened immutable-history and reconciliation requirements for published ordering conflicts.
 - Added restart/rediscovery requirements for unresolved ordered-stream ambiguity.
 - Clarified that an unresolved consumer cursor cannot cross an ordering ambiguity.
+- Clarified unknown publication outcomes, durable reconciliation evidence after restart, and the cursor advancement boundary.
 
 ### Conformance
 
@@ -28,6 +29,10 @@
 ### Compatibility
 
 - AACP Core remains **1.0**. The upcoming distribution release is **1.1.0** and strengthens the GitHub transport/recovery profile without redefining Core message semantics.
+
+## 1.1.0-rc.3 — 2026-08-31
+
+Release candidate clarifying unknown publication outcomes, durable reconciliation evidence after restart, and the ordered cursor advancement boundary. No new transport mechanism or Core semantics were introduced.
 
 ## 1.1.0-rc.2 — 2026-08-31
 
