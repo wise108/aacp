@@ -2,6 +2,9 @@
 
 AACP is a small, transport-independent protocol for reliable collaboration between software agents.
 
+**Protocol distribution:** 1.1.0  
+**AACP Core:** 1.0
+
 ## Что решает AACP
 
 AACP определяет минимальный контракт для:
@@ -29,6 +32,7 @@ AACP не определяет LLM, prompting, внутреннюю архите
 - [Conformance](docs/04-conformance/requirements.md)
 - [Schemas](schemas/)
 - [Adoption](docs/07-agent-adoption/AACP-ADOPTION.md)
+- [Changelog](CHANGELOG.md)
 
 Вся человекочитаемая документация протокола находится в `docs/`. Машиночитаемые схемы находятся в `schemas/`.
 
@@ -55,7 +59,7 @@ https://github.com/wise108/aacp/blob/main/docs/02-core/specification.md
 1. Найди и проанализируй все существующие механизмы взаимодействия между агентами в этом репозитории.
 2. Определи, какие из них являются текущим рабочим протоколом, а какие — историческими, вспомогательными или тестовыми.
 3. Не меняй существующий рабочий процесс до завершения инвентаризации и составления плана миграции.
-4. Мигрируй существующий протокол взаимодействия на AACP 1.0 согласно процедуре Adoption.
+4. Мигрируй существующий протокол взаимодействия на актуальную версию AACP согласно процедуре Adoption.
 5. Сохрани необходимые существующие данные и историю взаимодействия. Ничего не удаляй до тех пор, пока миграция не будет проверена.
 6. После успешной миграции выполни проверку того, что оба участника действительно могут работать по AACP.
 7. Только после успешной проверки удали или отключи устаревшие механизмы взаимодействия, которые были заменены AACP.
@@ -66,7 +70,7 @@ https://github.com/wise108/aacp/blob/main/docs/02-core/specification.md
 Критерий завершения:
 
 - существующий протокол взаимодействия инвентаризирован;
-- миграция на AACP 1.0 завершена;
+- миграция на актуальную версию AACP завершена;
 - необходимые исторические данные сохранены;
 - миграция проверена;
 - старый протокол отключён/удалён только после проверки;
@@ -87,7 +91,7 @@ https://github.com/wise108/aacp/blob/main/docs/02-core/specification.md
 ### English version
 
 ```text
-Adopt AACP as the single agent-to-agent communication protocol in this repository.
+Adopt the current AACP protocol version as the single agent-to-agent communication protocol in this repository.
 
 Canonical protocol repository:
 https://github.com/wise108/aacp
@@ -103,7 +107,7 @@ Your task:
 1. Discover and analyze all existing mechanisms used for agent-to-agent communication in this repository.
 2. Determine which mechanisms are the current working protocol and which are historical, auxiliary, or test-only.
 3. Do not change the existing workflow until the inventory and migration plan are complete.
-4. Migrate the existing communication protocol to AACP 1.0 according to the Adoption procedure.
+4. Migrate the existing communication protocol to the current AACP version according to the Adoption procedure.
 5. Preserve required existing data and communication history. Do not delete anything until migration has been verified.
 6. After migration, verify that both participants can actually operate using AACP.
 7. Only after successful verification, remove or disable obsolete communication mechanisms replaced by AACP.
@@ -114,7 +118,7 @@ Your task:
 Completion criteria:
 
 - the existing communication protocol has been inventoried;
-- migration to AACP 1.0 is complete;
+- migration to the current AACP version is complete;
 - required historical data has been preserved;
 - migration has been verified;
 - the old protocol has been disabled/removed only after verification;
@@ -136,6 +140,14 @@ When finished, provide a brief report:
 
 > Протокол должен быть проще систем, которые его используют.
 
+## Версионирование
+
+AACP uses separate versioning for the protocol distribution and AACP Core. The protocol distribution may advance when transport profiles, recovery procedures, conformance requirements, or adoption guidance change without redefining Core semantics.
+
+The current protocol distribution is **1.1.0**. AACP Core remains **1.0**.
+
+See [CHANGELOG.md](CHANGELOG.md) for release history.
+
 ## Статус
 
-AACP 1.0 — baseline спецификации. Core намеренно содержит только правила, необходимые для надёжного обмена задачами между агентами. Расширенные fault-injection и recovery-эксперименты относятся к conformance harness и не являются обязательными возможностями протокола.
+AACP Core 1.0 — stable baseline specification. Protocol distribution 1.1.0 strengthens the GitHub ordered-stream transport/recovery profile and conformance requirements without changing AACP Core message semantics.
