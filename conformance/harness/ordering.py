@@ -28,6 +28,35 @@ class AllocationState:
     next_sequence: int
 
 
+@dataclass(frozen=True)
+class ReconciliationResult:
+    conflict_sequence: int
+    message_ids: tuple[str, ...]
+    next_sequence: int
+
+
+def reconcile_collision(
+    messages: list[OrderedMessage], canonical_max_sequence: int
+) -> ReconciliationResult:
+    """Reconcile a true collision without rewriting immutable history."""
+    if not messages:
+        raise ValueError("at least one conflicting message is required")
+    sequences = {message.sequence for message in messages}
+    if len(sequences) != 1:
+        raise ValueError("all messages must occupy the same conflicting sequence")
+    message_ids = tuple(message.message_id for message in messages)
+    if len(set(message_ids)) != len(message_ids):
+        raise ValueError("conflicting messages must have distinct message IDs")
+    conflict_sequence = messages[0].sequence
+    if canonical_max_sequence < conflict_sequence:
+        raise ValueError("canonical state cannot be behind the conflict")
+    return ReconciliationResult(
+        conflict_sequence=conflict_sequence,
+        message_ids=message_ids,
+        next_sequence=canonical_max_sequence + 1,
+    )
+
+
 class SequenceAllocator:
     """CAS-protected deterministic sequence allocator."""
 
