@@ -18,7 +18,21 @@ Recommended layout:
 
 Protocol records are durable state. A Git commit is a transport publication mechanism, not an AACP message identity.
 
-## Publication
+## Publication boundary
+
+A message becomes a durable transport record only when it has been successfully published to the canonical remote state and that publication has been verified according to this transport profile.
+
+A locally created or locally committed but unverified message is not authoritative transport history. An unpublished stale allocation MAY be discarded locally, but the implementation MUST first establish that the logical message was not already published before creating a retry publication.
+
+A durably published message remains immutable even when it is later classified as non-orderable, conflicting, superseded, or otherwise ineligible for ordered execution.
+
+Publication state, orderability, and execution state are distinct. In particular:
+
+```text
+published ≠ orderable ≠ executed
+```
+
+A published message MUST NOT be assumed to have been executed merely because it exists in the canonical transport history.
 
 For Git-backed implementations the minimum publication sequence is:
 
@@ -99,6 +113,8 @@ last_seen_sequence
 last_seen_message_id
 ```
 
+The cursor MUST NOT by itself mean that a message has been executed. If an unresolved ambiguity exists at or before the cursor, the consumer MUST retain an explicit unresolved/recovery state and MUST NOT advance ordered processing past that ambiguity merely because the cursor value is numerically higher.
+
 Sequence is used for ordering/discovery; `message_id` is used for identity and deduplication.
 
 A consumer MUST NOT treat sequence equality alone as evidence that a message was already processed.
@@ -145,6 +161,24 @@ If a message arrives with a lower sequence than the highest observed sequence, t
 After restart or transport interruption, the consumer MUST rediscover durable records from canonical remote state. Rediscovery MUST use message identity for deduplication and sequence only for ordering/discovery where the profile guarantees apply.
 
 Missing ACK or RESULT MUST NOT be interpreted as proof that execution did not happen. Execution recovery remains governed by AACP Core.
+
+## Execution-state separation
+
+The GitHub transport records publication state; it does not establish execution success.
+
+At minimum, implementations performing recovery MUST be able to distinguish these conditions:
+
+- `LOCAL_ONLY` — prepared locally but not verified as remotely published;
+- `PUBLISHED` — durably present in canonical remote history;
+- `ORDERABLE` — eligible to participate in ordered processing;
+- `NON_ORDERABLE` — retained historically but blocked from ordered processing, including a true collision;
+- `EXECUTED` — execution was positively established by the agent/application;
+- `NOT_EXECUTED` — execution was positively established as not performed;
+- `UNKNOWN` — execution outcome cannot yet be established.
+
+These are operational/transport states and need not be encoded as fields in the AACP message envelope.
+
+A `PUBLISHED` record MUST NOT be inferred to be `EXECUTED`. A `NON_ORDERABLE` record MUST NOT be executed merely because it is present in durable history.
 
 ## Atomicity
 
