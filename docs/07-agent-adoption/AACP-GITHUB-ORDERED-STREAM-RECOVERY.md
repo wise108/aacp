@@ -125,12 +125,15 @@ The agent SHOULD publish or return an auditable report containing:
 - whether execution was performed, skipped, or remains uncertain;
 - conformance checks performed.
 
-## Ready-to-use prompt for cursor-remote-agent
+## Ready-to-use prompt for the protocol-enabled assistant repository
 
 ```text
 RECOVERY TASK — AACP GITHUB ORDERED STREAM
 
-You are recovering an existing AACP GitHub-backed agent dialogue after a possible ordered-stream sequence collision.
+You are the protocol-enabled agent responsible for the repository:
+https://github.com/wise108/vadim-baranov-assistant
+
+This repository is configured to communicate according to AACP. Do NOT invent or introduce another communication protocol.
 
 Canonical AACP protocol:
 https://github.com/wise108/aacp
@@ -139,38 +142,38 @@ Read these documents BEFORE changing anything:
 1. https://github.com/wise108/aacp/blob/main/docs/02-core/specification.md
 2. https://github.com/wise108/aacp/blob/main/docs/03-transports/github.md
 3. https://github.com/wise108/aacp/blob/main/docs/07-agent-adoption/AACP-GITHUB-ORDERED-STREAM-RECOVERY.md
+4. The repository's own AACP/protocol instructions and relevant project governance documents.
 
-Target transport repository:
-https://github.com/wise108/cursor-remote-agent
-
-Target dialogue branch:
-agent-dialogue
+Your task is to recover the existing AACP dialogue/transport state and then resume normal protocol-driven work. You are NOT being asked to modify AACP itself.
 
 Recovery rules:
 - Do not modify, delete, or renumber historical AACP messages.
-- Do not force-push the canonical dialogue branch.
+- Do not force-push the canonical dialogue/transport branch.
 - Do not invent sequence numbers from local state.
-- Treat the canonical remote branch/ref as authoritative.
-- Use message_id for identity and deduplication; sequence is only ordering/discovery metadata.
+- Treat canonical remote state as authoritative.
+- Use message_id for identity and deduplication; sequence is ordering metadata only.
 - If two different message_ids occupy one sequence in the same (conversation_id, stream_id), classify it as ORDERING_CONFLICT, preserve both records, stop ordered processing beyond the ambiguity, and reconcile before continuing.
 - Distinguish ORDERING_CONFLICT from SEQUENCE_GAP and stale publication.
 - Do not execute an uncertain command merely because an ACK or RESULT is missing.
 - Do not create a parallel protocol or bypass AACP.
+- Do not modify the AACP specification during this recovery task.
 
 Your first action is READ-ONLY DIAGNOSTICS. Determine:
-1. canonical remote branch/ref and current commit;
-2. complete ordered-stream history relevant to the dialogue;
+1. how this repository is configured to consume/emit AACP messages;
+2. the canonical remote transport/dialogue location and current commit/ref;
 3. conversation_id and stream_id;
-4. highest allocated sequence;
-5. any duplicate, collision, gap, stale-writer, or out-of-order condition;
-6. exact message_ids involved;
-7. whether any task execution outcome is uncertain.
+4. complete relevant ordered-stream history;
+5. highest allocated sequence;
+6. any duplicate, collision, gap, stale-writer, or out-of-order condition;
+7. exact message_ids involved;
+8. whether any task execution outcome is uncertain;
+9. the last protocol message that was successfully processed and the first message that cannot be safely continued.
 
 Do not modify anything during diagnostics.
 
-If and only if a reconciliation is required, perform the AACP GitHub Transport reconciliation procedure. Preserve immutable history. Determine the next safe sequence from canonical remote state. Record an auditable reconciliation record. Re-read and verify canonical remote state before resuming.
+If and only if reconciliation is required, perform the AACP GitHub Transport reconciliation procedure. Preserve immutable history. Determine the next safe sequence from canonical remote state. Record an auditable reconciliation record in the project's existing AACP-compatible transport location. Re-read and verify canonical remote state before resuming.
 
-Only after recovery is verified may you resume the dialogue.
+After recovery, resume the existing AACP dialogue. Do not reinterpret the original business/implementation task until the protocol state is known to be consistent.
 
 When you make any change:
 1. validate it;
@@ -179,18 +182,20 @@ When you make any change:
 4. push it to the canonical remote branch;
 5. verify the remote ref/commit after push.
 
-Every response/work result MUST be pushed. Do not leave the authoritative result only in the local worktree.
+Every response/work result MUST be pushed through the repository's established AACP transport mechanism. Do not leave the authoritative result only in the local worktree.
 
 Final report MUST include:
 - recovery status;
-- canonical commit before and after recovery;
+- canonical commit/ref before and after recovery;
 - conversation_id / stream_id;
 - sequence findings;
 - message IDs involved;
 - reconciliation performed or explicit "not required";
 - next safe sequence;
+- last safely processed message;
+- first blocked/uncertain message;
 - execution/retry safety assessment;
 - commit SHA and push verification.
 ```
 
-The prompt is an operational invocation of this procedure; it is not a replacement for the normative AACP specifications.
+The prompt is an operational invocation of this procedure for `vadim-baranov-assistant`. It is not a replacement for the normative AACP specifications.
