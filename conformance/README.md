@@ -1,6 +1,6 @@
-# AACP 1.0 Conformance Harness
+# AACP Conformance Harness
 
-This directory defines the reference test harness for AACP Core 1.0.
+This directory defines the reference test harness for AACP Core 1.0 and applicable transport-profile conformance scenarios.
 
 The harness is intentionally small and transport-neutral. It is not an agent runtime and it is not a production message broker.
 
@@ -44,6 +44,25 @@ The harness MUST distinguish:
 - result publication retry.
 
 These are different operations and MUST NOT be collapsed into one generic `retry()`.
+
+## GitHub ordered-stream profile
+
+The GitHub ordered-stream profile has executable scenarios G1–G10 in `tests/test_github_ordered_stream_profile.py`.
+
+These cover:
+
+- sequential allocation;
+- stale-writer/CAS recovery;
+- same-sequence/different-message-id collision;
+- immutable collision reconciliation;
+- real sequence gaps;
+- restart/rediscovery with unresolved collision;
+- local preparation versus durable publication;
+- published collision as non-orderable and non-executable;
+- published versus executed state separation;
+- cursor blocking at unresolved ambiguity.
+
+The profile tests are evidence for the transport requirements; they do not redefine AACP Core semantics.
 
 ## Evidence model
 
@@ -109,4 +128,4 @@ The first implementation may use an in-memory deterministic transport and durabl
 
 ## Exit criterion
 
-The harness is considered operational only when S01–S20 have executable tests and produce machine-readable evidence. A green test suite is necessary but does not by itself make a production agent conformant; the production implementation must run the same mandatory scenarios against its own runtime.
+The harness is considered operational only when the mandatory Core scenarios and applicable transport-profile scenarios have executable tests and produce machine-readable evidence. A green test suite is necessary but does not by itself make a production agent conformant; the production implementation must run the same mandatory scenarios against its own runtime.
