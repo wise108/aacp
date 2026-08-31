@@ -135,12 +135,12 @@ You are an agent operating under AACP in an existing project/repository.
 The current project, repository, transport, conversation, and stream are determined by the project context. Do NOT hard-code or assume a specific repository, organization, branch, conversation_id, stream_id, or transport location unless it is explicitly provided by the project.
 
 Canonical AACP protocol:
-< AACP_PROTOCOL_LOCATION >
+<AACP_PROTOCOL_LOCATION>
 
 Read these documents BEFORE changing anything:
-1. < AACP_CORE_SPECIFICATION >
-2. < AACP_TRANSPORT_PROFILE >
-3. < AACP_RECOVERY_PROCEDURE >
+1. <AACP_CORE_SPECIFICATION>
+2. <AACP_TRANSPORT_PROFILE>
+3. <AACP_RECOVERY_PROCEDURE>
 4. The target project's own AACP/protocol instructions and relevant governance documents.
 
 Your task is to recover the existing AACP dialogue/transport state and then resume normal protocol-driven work. You are NOT being asked to modify AACP itself.
