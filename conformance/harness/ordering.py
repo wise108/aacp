@@ -94,7 +94,7 @@ class SequenceAllocator:
 
 
 class OrderedConsumer:
-    """Consumer that separates sequence ordering from message identity."""
+    """Consumer that keeps unresolved ordering positions out of its durable cursor."""
 
     def __init__(self) -> None:
         self.cursor_sequence = 0
@@ -110,6 +110,10 @@ class OrderedConsumer:
         existing = self.by_sequence.get(message.sequence)
         if existing is not None and existing != message.message_id:
             self.unresolved_sequence = message.sequence
+            # The previously accepted message at this position can no longer
+            # justify cursor advancement. Roll back to the last safe position.
+            self.cursor_sequence = message.sequence - 1
+            self.cursor_message_id = self.by_sequence.get(self.cursor_sequence)
             raise OrderingConflict(message.sequence)
 
         if message.sequence > self.cursor_sequence + 1:
