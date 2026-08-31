@@ -42,6 +42,11 @@ An implementation is **AACP 1.0 CONFORMANT** only when every mandatory item belo
 - [ ] Crash after remote publication does not cause duplicate execution.
 - [ ] Crash before publication permits safe retry.
 - [ ] Recovery detects malformed or conflicting artifacts.
+- [ ] Ordered-stream recovery freezes processing beyond an unresolved ambiguity.
+- [ ] True sequence collisions preserve every immutable conflicting message.
+- [ ] Recovery derives the next allocatable sequence from canonical remote state.
+- [ ] Reconciliation is durably recorded and verified before ordered processing resumes.
+- [ ] Stale writers cannot bypass canonical ref protection with force-push.
 
 ## Transport
 
@@ -50,6 +55,8 @@ An implementation is **AACP 1.0 CONFORMANT** only when every mandatory item belo
 - [ ] Transport metadata is not used as logical message identity.
 - [ ] Transport outages are retryable where specified.
 - [ ] The transport cannot silently overwrite an immutable message.
+- [ ] Ordered Git streams use canonical-state allocation with CAS/equivalent protection.
+- [ ] GitHub transport distinguishes stale publication, `ORDERING_CONFLICT`, and `SEQUENCE_GAP`.
 
 ## Adoption and cutover
 
@@ -72,7 +79,7 @@ State          [ ]
 Results        [ ]
 Errors         [ ]
 Recovery       [ ]
-Transport     [ ]
+Transport      [ ]
 Adoption       [ ]
 
 RESULT: NOT CONFORMANT
