@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0 — 2026-08-31
+## [Unreleased]
 
 ### Protocol / transport
 
@@ -10,11 +10,12 @@
 - Clarified that durable publication, orderability, and execution are separate states.
 - Strengthened immutable-history and reconciliation requirements for published ordering conflicts.
 - Added restart/rediscovery requirements for unresolved ordered-stream ambiguity.
+- Clarified that an unresolved consumer cursor cannot cross an ordering ambiguity.
 
 ### Conformance
 
 - Added executable GitHub ordered-stream scenarios G1–G6.
-- Added coverage for publication/execution separation and collision recovery.
+- Added executable coverage G7–G10 for publication/execution separation and unresolved collision state.
 - Added recovery and reconciliation requirements to the conformance checklist.
 
 ### Adoption
@@ -24,16 +25,8 @@
 
 ### Compatibility
 
-- AACP Core remains **1.0**. This release is the AACP protocol distribution **1.1.0** and strengthens the GitHub transport/recovery profile without redefining Core message semantics.
+- AACP Core remains **1.0**. The upcoming distribution release is **1.1.0** and strengthens the GitHub transport/recovery profile without redefining Core message semantics.
 
-## Unreleased — post-1.1.0 hardening
+## 1.1.0-rc.1 — 2026-08-31
 
-### GitHub Transport
-
-- Normatively distinguish local-only preparation from durably published transport records.
-- Clarify that published, orderable, and executed are independent states.
-- Define operational states for recovery: `LOCAL_ONLY`, `PUBLISHED`, `ORDERABLE`, `NON_ORDERABLE`, `EXECUTED`, `NOT_EXECUTED`, and `UNKNOWN`.
-- Prevent an unresolved cursor from crossing an ordering ambiguity merely because its numeric sequence is higher.
-- Clarify recovery handling of stale unpublished allocations.
-
-These changes are intended for the next protocol distribution release after conformance validation.
+Release candidate for the transport/recovery hardening described above. Final 1.1.0 release requires conformance validation and a Git tag/release artifact.
