@@ -10,7 +10,9 @@ A sequence is considered **allocated** for protocol purposes only when the corre
 
 If publication is rejected because the canonical state advanced, the writer MUST reread canonical state before retrying. The retry of the same logical message MUST retain its `message_id`; it MUST NOT become a new logical command. Its original sequence MUST be retained if the original publication may have succeeded. A new sequence MAY be allocated only after rediscovery establishes that the original message was not published, or when the operation is explicitly a new logical message.
 
-An allocation that is proven never to have been published does not permanently consume a sequence. An allocation that was durably published MUST never be reused.
+If the outcome of a publication attempt is unknown, the implementation MUST treat the message as potentially published until canonical rediscovery establishes whether it was published. It MUST NOT allocate a replacement sequence on the assumption that the original message was not published.
+
+An allocation that is proven never to have been published does not permanently consume a sequence. An allocation that was durably published MUST never be reused, even if the corresponding record is later classified as non-orderable or otherwise ineligible for ordered processing.
 
 ## 2. Collision
 
@@ -33,6 +35,8 @@ Discovery may observe higher sequences, but `last_processed` MUST NOT cross `unr
 
 After restart, the implementation MUST reconstruct these values from canonical remote state and durable recovery records. Local cursor state is a cache, not authoritative history.
 
+`last_processed` MUST advance only over positions that are known to have completed ordered processing or that have been explicitly resolved by a durable reconciliation. A restart MUST NOT cause the cursor to cross an unresolved sequence merely because higher sequence values are present in canonical history.
+
 ## 4. Reconciliation
 
 A reconciliation record MUST have a unique `message_id` and MUST contain at least:
@@ -47,6 +51,8 @@ A reconciliation record MUST have a unique `message_id` and MUST contain at leas
 Publishing the same reconciliation record more than once MUST be idempotent by `message_id`.
 
 After reconciliation is durably published and verified, the affected sequence remains historical but is no longer an unresolved ordered position. New allocation MUST use a sequence greater than every allocated sequence in the canonical ordering domain.
+
+A verified durable reconciliation record is authoritative recovery evidence after restart. An implementation MUST use such a record when reconstructing whether the corresponding ordering ambiguity remains unresolved.
 
 ## 5. Publication and execution
 
