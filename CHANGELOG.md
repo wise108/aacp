@@ -25,3 +25,15 @@
 ### Compatibility
 
 - AACP Core remains **1.0**. This release is the AACP protocol distribution **1.1.0** and strengthens the GitHub transport/recovery profile without redefining Core message semantics.
+
+## Unreleased — post-1.1.0 hardening
+
+### GitHub Transport
+
+- Normatively distinguish local-only preparation from durably published transport records.
+- Clarify that published, orderable, and executed are independent states.
+- Define operational states for recovery: `LOCAL_ONLY`, `PUBLISHED`, `ORDERABLE`, `NON_ORDERABLE`, `EXECUTED`, `NOT_EXECUTED`, and `UNKNOWN`.
+- Prevent an unresolved cursor from crossing an ordering ambiguity merely because its numeric sequence is higher.
+- Clarify recovery handling of stale unpublished allocations.
+
+These changes are intended for the next protocol distribution release after conformance validation.
