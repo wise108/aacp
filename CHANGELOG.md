@@ -23,12 +23,14 @@
 
 ### Adoption
 
-- Added a transport-independent agent adoption/recovery prompt.
+- Added a universal project-adoption prompt as the single canonical invocation point in the repository root `README.md`.
+- Removed duplicate ready-to-use adoption prompts from protocol documentation.
 - Kept project/repository identifiers out of the normative protocol documentation.
 
-### Compatibility
+### Documentation consistency
 
-- AACP Core remains **1.0**. The upcoming distribution release is **1.1.0** and strengthens the GitHub transport/recovery profile without redefining Core message semantics.
+- Aligned the README with the actual repository version `1.1.0-rc.3` from `VERSION`.
+- Removed obsolete competing adoption-prompt entry points.
 
 ## 1.1.0-rc.3 — 2026-08-31
 
