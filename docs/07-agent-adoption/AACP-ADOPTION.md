@@ -4,7 +4,7 @@
 
 This document defines the procedure an AI agent MUST follow when adopting AACP in an existing project. It is designed so the same procedure can be used for Cursor, ChatGPT-driven project agents, or other cooperating agents.
 
-AACP is the protocol contract. A project-specific prompt should point the agent to this document rather than reproducing protocol rules.
+The universal project-adoption prompt is maintained in the repository `README.md`. This document defines the procedure that prompt invokes; it is not a second adoption prompt.
 
 ## 2. Authority and precedence
 
@@ -173,10 +173,8 @@ At the end of adoption an agent SHOULD report a machine-readable summary contain
 - conformance result;
 - AACP activation state.
 
-## 17. Minimal adoption prompt
+## 17. Canonical invocation
 
-A project may invoke this protocol with a short instruction such as:
+The canonical universal project-adoption prompt is maintained in the repository root `README.md` under **Universal Project Adoption Prompt**.
 
-> Adopt AACP for all inter-agent communication in this repository. Read the AACP Agent Adoption & Migration Protocol at `https://github.com/wise108/aacp/blob/main/docs/07-agent-adoption/AACP-ADOPTION.md` and the applicable AACP Core/transport specifications. Inspect the repository, freeze and inventory the existing IPC, produce and execute a zero-loss migration, verify it, cut over to AACP, and remove obsolete IPC artifacts only after successful verification. From cutover onward, use only AACP for agent-to-agent communication. Do not modify product behavior merely for protocol adoption unless required by the migration plan.
-
-The agent MUST read the referenced AACP documents; the prompt is not a substitute for the protocol specification.
+This document MUST NOT maintain a competing ready-to-use adoption prompt. Project-specific prompts MAY be generated inside a target project by following the canonical README prompt, but such prompts are local integration artifacts and MUST NOT redefine AACP semantics.
