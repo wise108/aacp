@@ -13,6 +13,8 @@ Read, in order:
 
 The AACP Core and applicable transport profile define protocol semantics. Project instructions MUST NOT weaken those semantics.
 
+The universal project-adoption prompt is maintained in the repository root `README.md`. This recovery document defines recovery procedure only and does not contain a competing ready-to-use prompt.
+
 ## Recovery objective
 
 Recover an existing ordered stream without rewriting history, losing messages, reusing allocated sequence values, or causing duplicate logical execution.
@@ -124,77 +126,3 @@ The agent SHOULD publish or return an auditable report containing:
 - whether ordered processing resumed;
 - whether execution was performed, skipped, or remains uncertain;
 - conformance checks performed.
-
-## Ready-to-use universal agent prompt
-
-```text
-RECOVERY TASK — AACP GITHUB ORDERED STREAM
-
-You are an agent operating under AACP in an existing project/repository.
-
-The current project, repository, transport, conversation, and stream are determined by the project context. Do NOT hard-code or assume a specific repository, organization, branch, conversation_id, stream_id, or transport location unless it is explicitly provided by the project.
-
-Canonical AACP protocol:
-<AACP_PROTOCOL_LOCATION>
-
-Read these documents BEFORE changing anything:
-1. <AACP_CORE_SPECIFICATION>
-2. <AACP_TRANSPORT_PROFILE>
-3. <AACP_RECOVERY_PROCEDURE>
-4. The target project's own AACP/protocol instructions and relevant governance documents.
-
-Your task is to recover the existing AACP dialogue/transport state and then resume normal protocol-driven work. You are NOT being asked to modify AACP itself.
-
-Recovery rules:
-- Do not modify, delete, or renumber historical AACP messages.
-- Do not force-push the canonical dialogue/transport branch.
-- Do not invent sequence numbers from local state.
-- Treat canonical remote state as authoritative.
-- Use message_id for identity and deduplication; sequence is ordering metadata only.
-- If two different message_ids occupy one sequence in the same (conversation_id, stream_id), classify it as ORDERING_CONFLICT, preserve all records, stop ordered processing beyond the ambiguity, and reconcile before continuing.
-- Distinguish ORDERING_CONFLICT from SEQUENCE_GAP and stale publication.
-- Do not execute an uncertain command merely because an ACK or RESULT is missing.
-- Do not create a parallel protocol or bypass AACP.
-- Do not modify the AACP specification during this recovery task.
-
-Your first action is READ-ONLY DIAGNOSTICS. Determine:
-1. how this project is configured to consume/emit AACP messages;
-2. the canonical remote transport/dialogue location and current commit/ref;
-3. conversation_id and stream_id;
-4. complete relevant ordered-stream history;
-5. highest allocated sequence;
-6. any duplicate, collision, gap, stale-writer, or out-of-order condition;
-7. exact message_ids involved;
-8. whether any task execution outcome is uncertain;
-9. the last protocol message that was successfully processed and the first message that cannot be safely continued.
-
-Do not modify anything during diagnostics.
-
-If and only if reconciliation is required, perform the AACP GitHub Transport reconciliation procedure. Preserve immutable history. Determine the next safe sequence from canonical remote state. Record an auditable reconciliation record in the project's existing AACP-compatible transport location. Re-read and verify canonical remote state before resuming.
-
-After recovery, resume the existing AACP dialogue. Do not reinterpret the original business/implementation task until the protocol state is known to be consistent.
-
-When you make any change:
-1. validate it;
-2. run relevant tests/checks;
-3. commit it;
-4. push it to the canonical remote branch;
-5. verify the remote ref/commit after push.
-
-Every response/work result MUST be pushed through the repository's established AACP transport mechanism. Do not leave the authoritative result only in the local worktree.
-
-Final report MUST include:
-- recovery status;
-- canonical commit/ref before and after recovery;
-- conversation_id / stream_id;
-- sequence findings;
-- message IDs involved;
-- reconciliation performed or explicit "not required";
-- next safe sequence;
-- last safely processed message;
-- first blocked/uncertain message;
-- execution/retry safety assessment;
-- commit SHA and push verification.
-```
-
-The prompt is a universal operational invocation of this procedure. Concrete project values MUST be supplied by the target project or its operator and MUST NOT be embedded in the AACP specification.
