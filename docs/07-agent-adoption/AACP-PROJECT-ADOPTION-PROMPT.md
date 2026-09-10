@@ -37,11 +37,13 @@ https://github.com/wise108/aacp
 
 Не копируй эти спецификации в проект. Они остаются canonical в AACP.
 
-ТВОЯ РОЛЬ
+ТВОЯ РОЛЬ И CAPABILITIES
 
-Сначала определи свою AACP identity и роль в текущем проекте. Не выводи identity из имени пользователя, GitHub account, branch или имени проекта без явного project binding.
+Сначала определи свою AACP identity, роль и необходимые capabilities в текущем проекте. Не выводи identity из имени пользователя, GitHub account, branch или имени проекта без явного project binding.
 
 Если ты не можешь определить identity/role или необходимые capabilities, не выдумывай их: зафиксируй gap и продолжай только в безопасной части adoption.
+
+Если среда не предоставляет необходимых возможностей для выбранного transport или durable/recovery semantics, не объявляй adoption завершённым. Зафиксируй конкретный capability gap.
 
 DISCOVER → FREEZE → INVENTORY → PLAN → MIGRATE → VERIFY → CUTOVER → CLEANUP → OPERATE
 
@@ -65,7 +67,17 @@ DISCOVER → FREEZE → INVENTORY → PLAN → MIGRATE → VERIFY → CUTOVER �
 
 Не изменяй и не удаляй ничего на этой стадии.
 
-2. ОПРЕДЕЛИ TRANSPORT
+2. FREEZE
+
+До начала миграции установи и зафиксируй communication freeze point.
+
+После freeze point не создавай новых legacy IPC messages.
+
+Если другой агент или процесс продолжает использовать legacy IPC и его нельзя надёжно остановить/заморозить, не продолжай миграцию: зафиксируй `MIGRATION_CONFLICT`.
+
+Не считай отсутствие новых наблюдаемых сообщений достаточным доказательством freeze, если transport или concurrent actor не позволяют это проверить.
+
+3. ОПРЕДЕЛИ TRANSPORT
 
 Определи, какой transport будет использоваться для AACP.
 
@@ -73,9 +85,11 @@ DISCOVER → FREEZE → INVENTORY → PLAN → MIGRATE → VERIFY → CUTOVER �
 
 Transport implementation не должна менять семантику AACP Core.
 
-3. СОЗДАЙ PROJECT-LOCAL AACP BINDING
+4. СОЗДАЙ PROJECT-LOCAL AACP BINDING
 
 В проекте должен появиться небольшой machine-readable binding, описывающий как этот конкретный проект использует AACP.
+
+Binding является **единственным authoritative project-local описанием AACP integration**. Остальные project-local instructions должны ссылаться на него и не создавать конкурирующие значения identity, role, transport, stream или conversation.
 
 Минимально binding должен позволять определить:
 
@@ -90,7 +104,7 @@ Transport implementation не должна менять семантику AACP 
 
 Binding является consumer configuration. Он НЕ является новой спецификацией протокола.
 
-4. СОЗДАЙ PROJECT-LOCAL AGENT INTEGRATION INSTRUCTIONS
+5. СОЗДАЙ PROJECT-LOCAL AGENT INTEGRATION INSTRUCTIONS
 
 Создай только те файлы, которые нужны конкретной среде проекта.
 
@@ -111,7 +125,7 @@ Binding является consumer configuration. Он НЕ является но
 
 Если в проекте одновременно присутствуют несколько AACP participants, project-local integration должен обеспечить согласованный binding для всех участников. Не создавай отдельный протокол для каждого участника.
 
-5. МИГРАЦИЯ LEGACY IPC
+6. МИГРАЦИЯ LEGACY IPC
 
 Если существовал legacy agent-to-agent protocol, следуй AACP Adoption Protocol.
 
@@ -123,16 +137,40 @@ Binding является consumer configuration. Он НЕ является но
 
 Не превращай ambiguous/in-flight work в completed без authoritative evidence.
 
-6. CUTOVER
+7. VERIFY
 
-После успешной verification:
+До cutover выполни как migration verification, так и применимый conformance gate.
+
+Проверь:
+
+- every authoritative legacy message has a corresponding AACP record;
+- no AACP record has an unexplained source;
+- no task has been duplicated by migration;
+- pending/in-flight state is preserved;
+- message IDs are unique;
+- ordered streams have valid sequence information;
+- migrated artifacts validate against AACP schemas;
+- selected transport can rediscover every migrated artifact;
+- recovery can reconcile interrupted publication without re-execution;
+- participating agents agree on the same migration boundary;
+- applicable Core/transport conformance requirements are satisfied.
+
+Не объявляй adoption compliant только потому, что integration files существуют или migration files были скопированы.
+
+Если verification или conformance gate не пройдены, оставайся в pre-cutover state, не удаляй legacy data и зафиксируй точный blocking condition.
+
+8. CUTOVER
+
+Выполняй cutover только после успешных verification и applicable conformance gate.
+
+После cutover:
 
 - AACP становится единственным active agent-to-agent protocol;
 - новые agent-to-agent messages создаются только как AACP messages;
 - legacy IPC больше не используется как рабочий канал;
 - obsolete legacy artifacts можно удалить только после verification и только если они действительно obsolete.
 
-7. ОСНОВНЫЕ RUNTIME ПРАВИЛА
+9. ОСНОВНЫЕ RUNTIME ПРАВИЛА
 
 Соблюдай AACP Agent Runtime Contract.
 
@@ -140,7 +178,7 @@ Binding является consumer configuration. Он НЕ является но
 
 - каждый новый logical message получает уникальный immutable message_id;
 - task_id идентифицирует logical task;
-- retry той же доставки не создаёт новый message_id;
+- retransmission той же доставки использует тот же message_id и тот же semantic payload;
 - duplicate message не должен повторно выполнять non-idempotent side effect;
 - ACK accepted означает acceptance, а не completion;
 - RESULT означает outcome, когда он предусмотрен контрактом;
@@ -152,7 +190,23 @@ Binding является consumer configuration. Он НЕ является но
 - ordering conflicts/gaps обрабатываются согласно transport semantics;
 - после restart состояние восстанавливается из canonical/durable protocol state.
 
-8. НЕ СОЗДАВАЙ ПРОТОКОЛ ПОВЕРХ AACP
+Различай **transport retransmission** и **execution retry**:
+
+TRANSPORT RETRANSMISSION:
+- та же logical message;
+- тот же message_id;
+- тот же semantic payload;
+- повторная доставка не создаёт новую logical command.
+
+EXECUTION RETRY:
+- это не повторная доставка того же сообщения;
+- он допускается только когда applicable AACP/task semantics явно разрешают retry после соответствующего результата/состояния;
+- retry не должен превращать UNKNOWN execution outcome в доказанное NOT_EXECUTED;
+- детали execution attempts и retry orchestration относятся к application orchestration, если они не определены Core/transport.
+
+Не вводи execution_attempt_id или retry engine только ради adoption, если их нет в текущем проекте и они не требуются применимым контрактом.
+
+10. НЕ СОЗДАВАЙ ПРОТОКОЛ ПОВЕРХ AACP
 
 Запрещено без отдельного protocol change:
 
@@ -168,7 +222,7 @@ Binding является consumer configuration. Он НЕ является но
 
 Если проектное требование не покрывается AACP, сначала определи, относится ли оно к protocol, transport, adapter или application orchestration. Не расширяй Core автоматически.
 
-9. НЕ СМЕШИВАЙ AACP И ORCHESTRATION
+11. НЕ СМЕШИВАЙ AACP И ORCHESTRATION
 
 AACP отвечает за inter-agent communication.
 
@@ -176,7 +230,7 @@ Registry, Task Registry, Dependency Graph, Progress Projection, orchestration ev
 
 Не добавляй их только потому, что проект в будущем может их использовать.
 
-10. MINIMAL REAL-WORLD VERIFICATION
+12. MINIMAL REAL-WORLD VERIFICATION
 
 После integration проверь реальный минимальный Golden Path:
 
@@ -195,22 +249,24 @@ same logical COMMAND / same message_id
   → duplicate handling
   → no second non-idempotent execution
 
-Если transport или среда не позволяют выполнить этот сценарий, не создавай workaround protocol. Зафиксируй конкретный technical gap.
+Если transport или среда не позволяют выполнить этот сценарий, не создавай workaround protocol. Зафиксируй конкретный technical/capability gap.
 
-11. КРИТЕРИЙ ЗАВЕРШЕНИЯ
+13. КРИТЕРИЙ ЗАВЕРШЕНИЯ
 
-Adoption завершён, если:
+Adoption завершён только если:
 
 - canonical AACP documents определены;
 - project-local binding создан или подтверждён;
+- binding является единственным authoritative project-local AACP binding;
 - необходимые integration instructions созданы для фактической среды;
 - legacy IPC inventory и migration выполнены, если legacy IPC существовал;
 - verification завершена;
+- applicable conformance gate пройден;
 - AACP стал единственным active agent-to-agent protocol;
 - минимальный real-world communication path проверен или конкретно зафиксирован blocking gap;
 - AACP Core не был изменён без отдельной protocol-level процедуры.
 
-12. ОТЧЁТ
+14. ОТЧЁТ
 
 В конце дай краткий отчёт:
 
@@ -221,7 +277,8 @@ Adoption завершён, если:
 - created/updated integration files;
 - legacy IPC found and migration result;
 - verification result;
-- remaining technical gaps;
+- conformance result;
+- remaining technical/capability gaps;
 - active AACP communication path.
 
 Не утверждай compliance только потому, что файлы существуют. Отделяй configuration/documentation от реально проверенного protocol behavior.
