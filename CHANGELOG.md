@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Publication & Bridge Layer
+
+- Added normative Publication & Bridge Layer under `docs/08-publication/`:
+  - Publisher contract (`publish(envelope, target) -> PublicationReceipt`)
+  - Message Store contract (Git and GitHub API as backends of one store)
+  - Bridge contract
+  - GitHub Issue Bridge profile (Issue as control-plane trigger, not Message Store)
+- Explicitly forbids caller-controlled authoritative `sequence` and second authoritative Message Stores.
+
 ### Protocol / transport
 
 - Hardened GitHub ordered-stream sequence allocation and canonical-state protection.

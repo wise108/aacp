@@ -34,6 +34,7 @@ AACP не определяет LLM, prompting, внутреннюю архите
 - [Adoption Protocol](docs/07-agent-adoption/AACP-ADOPTION.md)
 - [Agent Runtime Contract](docs/07-agent-adoption/AACP-AGENT-RUNTIME.md)
 - [GitHub Ordered-Stream Recovery](docs/07-agent-adoption/AACP-GITHUB-ORDERED-STREAM-RECOVERY.md)
+- [Publication & Bridge Layer](docs/08-publication/)
 - [Changelog](CHANGELOG.md)
 
 Вся нормативная документация протокола находится в `docs/`. Машиночитаемые схемы находятся в `schemas/`.
