@@ -79,7 +79,10 @@ class GitHubMessageStore:
                 raw = response.read()
         except HTTPError as exc:
             detail = exc.read().decode("utf-8", "replace")
-            if exc.code in (409, 422):
+            # GitHub's Git ref update reports a non-fast-forward CAS loss as
+            # HTTP 409. HTTP 422 is a validation/semantic request error, not
+            # evidence that another writer advanced the canonical ref.
+            if exc.code == 409:
                 raise CasConflict(f"github_http_{exc.code}:{detail}") from exc
             raise GitHubAPIError(f"github_http_{exc.code}:{detail}") from exc
         return json.loads(raw.decode("utf-8")) if raw else None
