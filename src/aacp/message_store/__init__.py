@@ -1,10 +1,7 @@
-"""Production Message Store package: contract + models only.
-
-Test backends live in ``aacp.testing`` (not exported here).
-Git / GitHub API adapters are Phase 2B.
-"""
+"""Production Message Store package: contract, models, and backends."""
 
 from aacp.message_store.contract import MessageStore
+from aacp.message_store.git import GitMessageStore
 from aacp.message_store.models import (
     CanonicalState,
     CasConflict,
@@ -18,6 +15,7 @@ from aacp.message_store.models import (
 
 __all__ = [
     "MessageStore",
+    "GitMessageStore",
     "CanonicalState",
     "CasConflict",
     "CasResult",
