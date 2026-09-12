@@ -209,6 +209,38 @@ def test_uncertain_lost_response_after_success_idempotent_retry():
     assert again.publication_commit == receipt.publication_commit
 
 
+def test_uncertain_reconcile_read_failure_is_retryable_without_blind_sequence_allocation():
+    events: list[str] = []
+    first = {"done": False}
+
+    def hook(expected, publication, current):
+        if not first["done"]:
+            first["done"] = True
+            events.append(f"uncertain:seq={publication.message['sequence']}")
+            return HookDecision(outcome="uncertain", reason="reconcile_read_failed", apply_write=False)
+        events.append(f"cas_ok:seq={publication.message['sequence']}")
+        return None
+
+    store = InMemoryMessageStore(
+        target_ref=TARGET.target_ref,
+        stream_id=TARGET.stream_id,
+        cas_hook=hook,
+    )
+    original_read = store.read_canonical_state
+    failed = {"done": False}
+
+    def flaky_read():
+        if not failed["done"]:
+            failed["done"] = True
+            raise RuntimeError("temporary canonical-state read failure")
+        return original_read()
+
+    store.read_canonical_state = flaky_read
+    receipt = Publisher(store).publish(envelope("M-reconcile-retry"), TARGET)
+    assert receipt.sequence == 1
+    assert events == ["uncertain:seq=1", "cas_ok:seq=1"]
+
+
 def test_target_ref_mismatch_rejected_before_idempotency_or_allocation():
     store = InMemoryMessageStore(target_ref="refs/heads/canonical", stream_id=TARGET.stream_id)
     bad_target = TargetBinding(
