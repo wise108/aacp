@@ -102,9 +102,13 @@ def test_historical_collision_is_immutable_and_detectable() -> None:
     assert records[0].message_id != records[1].message_id
     consumer = OrderedConsumer()
     consumer.observe(msg("M-before", 34))
+    assert consumer.observe(records[0]) == "new"
     with pytest.raises(OrderingConflict):
-        consumer.observe(records[0])
+        consumer.observe(records[1])
     assert records == [msg("M1", 35), msg("M2", 35)]
+    assert consumer.cursor_sequence == 34
+    assert consumer.cursor_message_id == "M-before"
+    assert consumer.unresolved_sequence == 35
 
 
 def test_collision_reconciliation_preserves_ids_and_allocates_after_canonical_max() -> None:
