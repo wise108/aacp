@@ -126,9 +126,20 @@ class Publisher:
     def _reconcile_uncertain(
         self, prepared: dict[str, Any], target: TargetBinding
     ) -> PublicationReceipt | None:
-        state = self.store.read_canonical_state()
-        self._validate_state_target(state, target)
-        evidence = self.store.find_publication_evidence(state, prepared["message_id"])
+        """Reconcile by message_id; transient read/evidence failure is retryable.
+
+        An uncertain write must never allocate a new candidate sequence until the
+        current canonical state has been inspected for the same message_id. If that
+        inspection itself fails, return no receipt and let the outer CAS loop retry.
+        """
+        try:
+            state = self.store.read_canonical_state()
+            self._validate_state_target(state, target)
+            evidence = self.store.find_publication_evidence(state, prepared["message_id"])
+        except (PublicationConflict, TargetInvalid):
+            raise
+        except Exception:
+            return None
         if evidence is None:
             return None
         return self._receipt_or_conflict(prepared, evidence, target)
