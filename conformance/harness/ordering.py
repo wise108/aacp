@@ -67,11 +67,7 @@ def reconcile_collision(
     conflict_sequence = messages[0].sequence
     if canonical_max_sequence < conflict_sequence:
         raise ValueError("canonical state cannot be behind the conflict")
-    return ReconciliationResult(
-        conflict_sequence=conflict_sequence,
-        message_ids=message_ids,
-        next_sequence=canonical_max_sequence + 1,
-    )
+    return ReconciliationResult(conflict_sequence, message_ids, canonical_max_sequence + 1)
 
 
 class SequenceAllocator:
@@ -106,10 +102,6 @@ class OrderedConsumer:
     def observe(self, message: OrderedMessage) -> str:
         if message.message_id in self.seen:
             return "duplicate"
-
-        # A first observed message establishes the local cursor regardless of
-        # its absolute sequence. This lets a consumer rediscover a stream from
-        # an already-advanced durable position without inventing a gap.
         if self.cursor_message_id is None:
             self.seen.add(message.message_id)
             self.by_sequence[message.sequence] = message.message_id
@@ -118,33 +110,19 @@ class OrderedConsumer:
             return "new"
 
         existing = self.by_sequence.get(message.sequence)
-
-        # A sequence collision must be checked before the historical/late
-        # classification. Otherwise a conflicting record behind the cursor
-        # would be silently accepted and the collision would become invisible.
         if existing is not None and existing != message.message_id:
             self.unresolved_sequence = message.sequence
-            # If the conflicting sequence was tentatively advanced past, the
-            # cursor must stop immediately before the unresolved position.
-            # A collision at the current cursor does not justify moving the
-            # cursor backward: that position was already durably established.
-            if message.sequence > self.cursor_sequence:
-                self.cursor_sequence = message.sequence - 1
-                self.cursor_message_id = self.by_sequence.get(self.cursor_sequence)
+            predecessor = message.sequence - 1
+            if predecessor in self.by_sequence:
+                self.cursor_sequence = predecessor
+                self.cursor_message_id = self.by_sequence[predecessor]
             raise OrderingConflict(message.sequence)
 
-        # Rediscovery of the exact current cursor is historical, not a new
-        # message. Identity matters because a different message at the same
-        # sequence is a collision handled above.
-        if message.sequence == self.cursor_sequence:
-            if message.message_id == self.cursor_message_id:
-                self.seen.add(message.message_id)
-                self.by_sequence.setdefault(message.sequence, message.message_id)
-                return "late"
+        if message.sequence == self.cursor_sequence and message.message_id == self.cursor_message_id:
+            self.seen.add(message.message_id)
+            self.by_sequence.setdefault(message.sequence, message.message_id)
+            return "late"
 
-        # Anything behind the durable cursor is historical. It cannot move the
-        # cursor, but a previously unseen identity is retained so restart
-        # rediscovery remains deterministic.
         if message.sequence < self.cursor_sequence:
             self.seen.add(message.message_id)
             self.by_sequence.setdefault(message.sequence, message.message_id)
