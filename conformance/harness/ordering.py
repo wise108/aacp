@@ -117,20 +117,38 @@ class OrderedConsumer:
             self.cursor_message_id = message.message_id
             return "new"
 
-        # Anything at or behind the durable cursor is historical. It cannot
-        # move the cursor, but a previously unseen identity is still retained
-        # so restart rediscovery remains deterministic.
-        if message.sequence <= self.cursor_sequence:
+        existing = self.by_sequence.get(message.sequence)
+
+        # A sequence collision must be checked before the historical/late
+        # classification. Otherwise a conflicting record behind the cursor
+        # would be silently accepted and the collision would become invisible.
+        if existing is not None and existing != message.message_id:
+            self.unresolved_sequence = message.sequence
+            # If the conflicting sequence was tentatively advanced past, the
+            # cursor must stop immediately before the unresolved position.
+            # A collision at the current cursor does not justify moving the
+            # cursor backward: that position was already durably established.
+            if message.sequence > self.cursor_sequence:
+                self.cursor_sequence = message.sequence - 1
+                self.cursor_message_id = self.by_sequence.get(self.cursor_sequence)
+            raise OrderingConflict(message.sequence)
+
+        # Rediscovery of the exact current cursor is historical, not a new
+        # message. Identity matters because a different message at the same
+        # sequence is a collision handled above.
+        if message.sequence == self.cursor_sequence:
+            if message.message_id == self.cursor_message_id:
+                self.seen.add(message.message_id)
+                self.by_sequence.setdefault(message.sequence, message.message_id)
+                return "late"
+
+        # Anything behind the durable cursor is historical. It cannot move the
+        # cursor, but a previously unseen identity is retained so restart
+        # rediscovery remains deterministic.
+        if message.sequence < self.cursor_sequence:
             self.seen.add(message.message_id)
             self.by_sequence.setdefault(message.sequence, message.message_id)
             return "late"
-
-        existing = self.by_sequence.get(message.sequence)
-        if existing is not None and existing != message.message_id:
-            # The cursor itself remains at the last known safe position. Do
-            # not manufacture a rollback from the conflicting sequence.
-            self.unresolved_sequence = message.sequence
-            raise OrderingConflict(message.sequence)
 
         if message.sequence > self.cursor_sequence + 1:
             raise SequenceGap((self.cursor_sequence, message.sequence))
