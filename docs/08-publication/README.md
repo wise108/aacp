@@ -46,14 +46,19 @@ Publisher
 Message Store
 ```
 
-## Non-goals (this phase)
+## Non-goals (Phase 1 normative docs)
 
-- Production library code (`src/aacp`, reusable packages)
 - Changing Core or transport semantics
 - Creating a second Message Store
 - Making Registry/orchestration stores authoritative for AACP messages
 - Allowing callers to supply an authoritative `sequence`
 - Deleting project-local legacy publishers
+
+## Implementation status
+
+- **Phase 2A (skeleton):** `src/aacp/publisher/` + `src/aacp/message_store/` with in-memory test store and tests under `tests/publisher/` and `tests/message_store/`.
+- **Phase 2B (not started):** Git / GitHub API production adapters.
+- **Bridge production:** not started.
 
 ## Authority
 

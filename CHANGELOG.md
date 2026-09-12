@@ -10,6 +10,7 @@
   - Bridge contract
   - GitHub Issue Bridge profile (Issue as control-plane trigger, not Message Store)
 - Explicitly forbids caller-controlled authoritative `sequence` and second authoritative Message Stores.
+- **Phase 2A:** added canonical Publisher + Message Store skeleton under `src/aacp/` with in-memory test store and contract tests (uncertain publication reconcile-by-`message_id`, idempotency, CAS concurrency). No Git/GitHub production adapters yet.
 
 ### Protocol / transport
 
