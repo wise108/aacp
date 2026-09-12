@@ -1,6 +1,9 @@
 name: AACP Conformance
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
     branches:
       - main
@@ -23,3 +26,6 @@ jobs:
 
       - name: Run complete AACP conformance suite
         run: python -m pytest -q conformance
+
+      - name: Run Publication layer tests
+        run: python -m pytest -q tests/publisher tests/message_store
