@@ -2,6 +2,7 @@
 
 from aacp.message_store.contract import MessageStore
 from aacp.message_store.git import GitMessageStore
+from aacp.message_store.github_api import GitHubAPIError, GitHubMessageStore
 from aacp.message_store.models import (
     CanonicalState,
     CasConflict,
@@ -16,6 +17,8 @@ from aacp.message_store.models import (
 __all__ = [
     "MessageStore",
     "GitMessageStore",
+    "GitHubMessageStore",
+    "GitHubAPIError",
     "CanonicalState",
     "CasConflict",
     "CasResult",
