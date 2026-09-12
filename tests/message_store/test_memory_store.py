@@ -1,9 +1,27 @@
-"""Message Store contract tests (in-memory backend)."""
+"""Message Store contract tests (in-memory TEST backend via aacp.testing)."""
 
 from __future__ import annotations
 
-from aacp.message_store import HookDecision, InMemoryMessageStore
+import aacp.message_store as message_store
 from aacp.message_store.models import CasConflict, CasSuccess, CasUncertain
+from aacp.testing import HookDecision, InMemoryMessageStore
+
+
+def test_production_message_store_does_not_export_inmemory():
+    assert "InMemoryMessageStore" not in message_store.__all__
+    assert "HookDecision" not in message_store.__all__
+    assert not hasattr(message_store, "InMemoryMessageStore")
+    assert not hasattr(message_store, "HookDecision")
+    # Production package still exports the contract surface.
+    assert "MessageStore" in message_store.__all__
+    assert "CanonicalState" in message_store.__all__
+
+
+def test_inmemory_is_imported_from_testing_namespace():
+    from aacp import testing
+
+    assert testing.InMemoryMessageStore is InMemoryMessageStore
+    assert "InMemoryMessageStore" in testing.__all__
 
 
 def test_read_list_cas_verify_roundtrip():

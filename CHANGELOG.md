@@ -11,6 +11,7 @@
   - GitHub Issue Bridge profile (Issue as control-plane trigger, not Message Store)
 - Explicitly forbids caller-controlled authoritative `sequence` and second authoritative Message Stores.
 - **Phase 2A:** added canonical Publisher + Message Store skeleton under `src/aacp/` with in-memory test store and contract tests (uncertain publication reconcile-by-`message_id`, idempotency, CAS concurrency). No Git/GitHub production adapters yet.
+- Post-2A hardening: public API is only `Publisher(store).publish(envelope, target)`; `InMemoryMessageStore` moved to test-only `aacp.testing`; packaging version remains distribution `1.1.0rc3` with no separate Publication API version.
 
 ### Protocol / transport
 

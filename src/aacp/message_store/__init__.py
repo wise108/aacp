@@ -1,7 +1,10 @@
-"""Message Store package exports."""
+"""Production Message Store package: contract + models only.
+
+Test backends live in ``aacp.testing`` (not exported here).
+Git / GitHub API adapters are Phase 2B.
+"""
 
 from aacp.message_store.contract import MessageStore
-from aacp.message_store.memory import HookDecision, InMemoryMessageStore
 from aacp.message_store.models import (
     CanonicalState,
     CasConflict,
@@ -14,8 +17,6 @@ from aacp.message_store.models import (
 
 __all__ = [
     "MessageStore",
-    "InMemoryMessageStore",
-    "HookDecision",
     "CanonicalState",
     "CasConflict",
     "CasResult",

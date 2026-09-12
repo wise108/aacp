@@ -56,9 +56,15 @@ Message Store
 
 ## Implementation status
 
-- **Phase 2A (skeleton):** `src/aacp/publisher/` + `src/aacp/message_store/` with in-memory test store and tests under `tests/publisher/` and `tests/message_store/`.
+- **Phase 2A (skeleton):** `src/aacp/publisher/` + `src/aacp/message_store/` (contract/models only). Public API: `Publisher(store).publish(envelope, target) -> PublicationReceipt`. Test-only store: `aacp.testing.InMemoryMessageStore`.
 - **Phase 2B (not started):** Git / GitHub API production adapters.
 - **Bridge production:** not started.
+
+## Versioning
+
+- AACP distribution: `1.1.0-rc.3` (packaging pep440 `1.1.0rc3`)
+- AACP Core: `1.0`
+- Publication Layer: **no separate public version** yet; it is part of the current distribution
 
 ## Authority
 

@@ -1,4 +1,8 @@
-"""In-memory Message Store for Publication Layer tests (not production)."""
+"""In-memory Message Store — TEST-ONLY (not a production backend).
+
+Production code MUST use a real Message Store adapter (Phase 2B: Git / GitHub API).
+Import from ``aacp.testing``, never treat this as part of ``aacp.message_store``.
+"""
 
 from __future__ import annotations
 
@@ -36,7 +40,7 @@ CasHook = Callable[
 
 
 class InMemoryMessageStore:
-    """Process-local CAS store standing in for a canonical remote tip."""
+    """Process-local CAS store for tests only. Not a production Message Store."""
 
     def __init__(
         self,

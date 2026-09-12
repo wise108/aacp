@@ -142,10 +142,3 @@ class Publisher:
             target_ref=state.target_ref,
             publication_commit=state.token,
         )
-
-
-def publish(
-    store: MessageStore, envelope: dict[str, Any], target: TargetBinding
-) -> PublicationReceipt:
-    """Module-level API: publish(envelope, target) -> PublicationReceipt."""
-    return Publisher(store).publish(envelope, target)

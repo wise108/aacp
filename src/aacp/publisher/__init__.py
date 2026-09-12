@@ -1,4 +1,11 @@
-"""Publisher package exports."""
+"""Publisher package exports.
+
+Public publish surface:
+
+    Publisher(store).publish(envelope, target) -> PublicationReceipt
+
+There is no module-level ``publish(store, ...)`` helper.
+"""
 
 from aacp.publisher.errors import (
     ProtocolInvalid,
@@ -7,7 +14,7 @@ from aacp.publisher.errors import (
     TargetInvalid,
 )
 from aacp.publisher.models import PublicationReceipt, TargetBinding
-from aacp.publisher.publisher import Publisher, publish
+from aacp.publisher.publisher import Publisher
 
 __all__ = [
     "ProtocolInvalid",
@@ -17,5 +24,4 @@ __all__ = [
     "PublicationReceipt",
     "TargetBinding",
     "Publisher",
-    "publish",
 ]

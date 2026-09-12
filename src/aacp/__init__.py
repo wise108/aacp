@@ -1,10 +1,13 @@
 """AACP Publication Layer skeleton (Phase 2A).
 
-This package provides the canonical Publisher + Message Store contracts and a
-test-only in-memory Message Store. Production Git/GitHub adapters are Phase 2B.
+Canonical API:
+
+    Publisher(store).publish(envelope, target) -> PublicationReceipt
+
+``aacp.testing`` provides test-only Message Store doubles — not for production.
 """
 
-from aacp.publisher import PublicationReceipt, Publisher, TargetBinding, publish
+from aacp.publisher import PublicationReceipt, Publisher, TargetBinding
 from aacp.publisher.errors import (
     ProtocolInvalid,
     PublicationConflict,
@@ -16,7 +19,6 @@ __all__ = [
     "PublicationReceipt",
     "Publisher",
     "TargetBinding",
-    "publish",
     "ProtocolInvalid",
     "PublicationConflict",
     "PublishRetriesExceeded",
