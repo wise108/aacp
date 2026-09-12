@@ -12,6 +12,7 @@ from aacp.message_store.models import (
     CasSuccess,
     CasUncertain,
     PreparedPublication,
+    PublicationEvidence,
     VerificationResult,
 )
 
@@ -23,5 +24,6 @@ __all__ = [
     "CasSuccess",
     "CasUncertain",
     "PreparedPublication",
+    "PublicationEvidence",
     "VerificationResult",
 ]

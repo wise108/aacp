@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import Any
 
 from aacp.message_store.contract import MessageStore
-from aacp.message_store.models import CasConflict, CasSuccess, CasUncertain
+from aacp.message_store.models import CasConflict, CasSuccess, CasUncertain, PublicationEvidence
 from aacp.publisher.errors import (
     ProtocolInvalid,
     PublicationConflict,
@@ -39,9 +39,12 @@ class Publisher:
         last_reason = "none"
         for _ in range(self.max_attempts):
             state = self.store.read_canonical_state()
-            existing = self.store.find_by_message_id(state, prepared["message_id"])
-            if existing is not None:
-                return self._receipt_or_conflict(prepared, existing, state.token)
+            self._validate_state_target(state, target)
+            evidence = self.store.find_publication_evidence(
+                state, prepared["message_id"]
+            )
+            if evidence is not None:
+                return self._receipt_or_conflict(prepared, evidence, target)
 
             messages = self.store.list_messages(state)
             sequence = candidate_sequence(messages)
@@ -50,7 +53,7 @@ class Publisher:
             outcome = self.store.publish_cas(state, publication)
 
             if isinstance(outcome, CasSuccess):
-                return self._verify_and_receipt(outcome.new_state, message)
+                return self._verify_and_receipt(outcome, message, target)
 
             if isinstance(outcome, CasConflict):
                 last_reason = outcome.reason
@@ -58,10 +61,9 @@ class Publisher:
 
             if isinstance(outcome, CasUncertain):
                 last_reason = outcome.reason
-                receipt = self._reconcile_uncertain(prepared)
+                receipt = self._reconcile_uncertain(prepared, target)
                 if receipt is not None:
                     return receipt
-                # Proven absent after rediscovery → retry with fresh candidate.
                 continue
 
             last_reason = f"unexpected_outcome:{type(outcome)!r}"
@@ -69,6 +71,16 @@ class Publisher:
         raise PublishRetriesExceeded(
             f"exhausted {self.max_attempts} attempts; last={last_reason}"
         )
+
+    def _validate_state_target(self, state, target: TargetBinding) -> None:
+        if state.target_ref != target.target_ref:
+            raise TargetInvalid(
+                "target_ref does not match canonical Message Store state"
+            )
+        if state.stream_id != target.stream_id:
+            raise TargetInvalid(
+                "stream_id does not match canonical Message Store ordering domain"
+            )
 
     def _validate_and_normalize(
         self, envelope: dict[str, Any], target: TargetBinding
@@ -88,7 +100,6 @@ class Publisher:
         if stream != target.stream_id:
             raise TargetInvalid("stream_id does not match target binding")
 
-        # Caller MUST NOT own authoritative sequence — always drop it.
         normalized = dict(envelope)
         normalized.pop("sequence", None)
         normalized["stream_id"] = target.stream_id
@@ -98,47 +109,56 @@ class Publisher:
     def _receipt_or_conflict(
         self,
         prepared: dict[str, Any],
-        existing: dict[str, Any],
-        publication_commit: str,
+        evidence: PublicationEvidence,
+        target: TargetBinding,
     ) -> PublicationReceipt:
+        existing = evidence.message
         if semantic_fingerprint(existing) != semantic_fingerprint(prepared):
             raise PublicationConflict(
                 f"message_id={prepared['message_id']} already published with different content"
             )
-        state = self.store.read_canonical_state()
         return PublicationReceipt.from_published(
             existing,
-            target_ref=state.target_ref,
-            publication_commit=publication_commit or state.token,
+            target_ref=target.target_ref,
+            publication_commit=evidence.publication_commit,
         )
 
     def _reconcile_uncertain(
-        self, prepared: dict[str, Any]
+        self, prepared: dict[str, Any], target: TargetBinding
     ) -> PublicationReceipt | None:
-        """Mandatory path after CasUncertain: reconcile by message_id first."""
         state = self.store.read_canonical_state()
-        existing = self.store.find_by_message_id(state, prepared["message_id"])
-        if existing is None:
+        self._validate_state_target(state, target)
+        evidence = self.store.find_publication_evidence(state, prepared["message_id"])
+        if evidence is None:
             return None
-        return self._receipt_or_conflict(prepared, existing, state.token)
+        return self._receipt_or_conflict(prepared, evidence, target)
 
     def _verify_and_receipt(
-        self, state, message: dict[str, Any]
+        self,
+        outcome: CasSuccess,
+        message: dict[str, Any],
+        target: TargetBinding,
     ) -> PublicationReceipt:
+        state = outcome.new_state
+        self._validate_state_target(state, target)
         verification = self.store.verify_publication(
             state, message["message_id"], int(message["sequence"])
         )
         if not verification.verified or verification.message is None:
-            # Ambiguous verify after apparent success → reconcile, do not invent sequence.
-            reconciled = self._reconcile_uncertain(message)
+            reconciled = self._reconcile_uncertain(message, target)
             if reconciled is not None:
                 return reconciled
             raise PublishRetriesExceeded(
                 f"verification failed for message_id={message['message_id']}: "
                 f"{verification.reason}"
             )
+        publication_commit = verification.publication_commit or outcome.publication_commit
+        if not publication_commit:
+            raise PublishRetriesExceeded(
+                f"publication evidence missing for message_id={message['message_id']}"
+            )
         return PublicationReceipt.from_published(
             verification.message,
-            target_ref=state.target_ref,
-            publication_commit=state.token,
+            target_ref=target.target_ref,
+            publication_commit=publication_commit,
         )

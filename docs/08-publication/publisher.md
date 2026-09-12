@@ -18,7 +18,7 @@ publish(envelope, target) -> PublicationReceipt
 
 ### 2.1 Inputs
 
-- `envelope` — AACP message envelope **without** an authoritative `sequence`. If `sequence` is present, the Publisher MUST strip/ignore it as a candidate hint only when explicitly documenting that behavior; it MUST NOT treat a caller-supplied value as the authoritative allocated sequence. Preferred and default behavior: reject or drop caller-supplied `sequence` before allocation.
+- `envelope` — AACP message envelope **without** an authoritative `sequence`. If `sequence` is present, the Publisher MUST strip/ignore it; it MUST NOT treat a caller-supplied value as the authoritative allocated sequence.
 - `target` — publication target binding resolved by policy (repository/ref/conversation/stream/profile). Callers MUST NOT freely invent arbitrary targets outside an authorized binding.
 
 ### 2.2 Output
@@ -30,17 +30,16 @@ publish(envelope, target) -> PublicationReceipt
 The Publisher MUST:
 
 1. **Validate envelope** against AACP Core required fields and schema constraints applicable to the message type.
-2. **Validate target binding** — confirm protocol/profile, canonical ref, conversation, stream, and authorization for the caller/bridge.
-3. **Check idempotency** — if `message_id` is already present in the canonical Message Store with matching semantic content, return a receipt for the existing publication (idempotent success). If the same `message_id` exists with conflicting content, fail with `PUBLICATION_CONFLICT` / protocol conflict; do not overwrite.
-4. **Read canonical Message Store state** for the target ordering domain.
-5. **Calculate candidate sequence** for ordered streams:
-   - candidate = `max(existing envelope.sequence values in the ordering domain) + 1`
+2. **Read and validate canonical state** — confirm that the requested target ref and stream match the authoritative Message Store state before idempotency lookup or allocation.
+3. **Check idempotency** — if `message_id` is already present in the canonical Message Store with matching semantic content, return a receipt for the existing publication (idempotent success), including its original publication commit/version. If the same `message_id` exists with conflicting content, fail with `PUBLICATION_CONFLICT`; do not overwrite.
+4. **Calculate candidate sequence** for the target's single ordered-stream domain:
+   - candidate = `max(existing envelope.sequence values in the domain) + 1`
    - gaps from historical conflicts remain; do not renumber history
    - filenames are **not** authoritative for uniqueness or ordering
-6. **Perform CAS publication** via the Message Store contract (`publish_cas` / equivalent) against the exact state token read in step 4.
-7. **On CAS conflict** — reread canonical state and retry from step 3/4. Do not force-update the canonical ref. Do not keep a stale candidate sequence after the ref advanced.
-8. **Verify publication** — confirm the message is discoverable at the new canonical head with the expected `message_id` and allocated `sequence`.
-9. **Return `PublicationReceipt`**.
+5. **Perform CAS publication** via the Message Store contract (`publish_cas` / equivalent) against the exact state token read in step 2.
+6. **On CAS conflict** — reread canonical state and retry from step 2. Do not force-update the canonical ref. Do not keep a stale candidate sequence after the ref advanced.
+7. **Verify publication** — confirm the message is discoverable at the new canonical head with the expected `message_id`, allocated `sequence`, and exact publication provenance.
+8. **Return `PublicationReceipt`**.
 
 ## 4. Sequence ownership (critical)
 
@@ -53,7 +52,7 @@ Successful CAS + verify = moment the sequence is occupied
 ### MUST
 
 - Caller MUST NOT supply an authoritative `sequence`.
-- Publisher MUST allocate sequence only from canonical remote/store state.
+- Publisher MUST allocate sequence only from canonical remote/store state for the target's ordering domain.
 - Retransmission of the **same** logical message MUST reuse the same `message_id`.
 - A sequence value is occupied only after durable verified publication (or durable evidence of publication per transport ordered-stream rules).
 
@@ -71,17 +70,15 @@ If the outcome of a CAS attempt is unknown (timeout, crash after write, ambiguou
 
 1. Treat the message as **potentially published**.
 2. Reconcile against the canonical Message Store by `message_id`.
-3. If found → return receipt for the existing publication (no new sequence).
+3. If found → return receipt for the existing publication, with the original publication commit/version and no new sequence.
 4. If proven absent → retry with a fresh candidate allocation for the same `message_id`.
 5. MUST NOT assume absence without rediscovery.
-
-This aligns with GitHub ordered-stream semantics: unknown outcome ⇒ reconcile before reallocating.
 
 ## 5. Idempotency
 
 | Situation | Required behavior |
 |---|---|
-| Same `message_id`, same semantic content, already published | Idempotent success; return existing receipt; no new message artifact |
+| Same `message_id`, same semantic content, already published | Idempotent success; return existing receipt and original publication version; no new message artifact |
 | Same `message_id`, different content | Conflict; do not overwrite immutable history |
 | Retransmission | Same `message_id`; do not mint a new logical message |
 | Duplicate command delivery after accept | Receiver/runtime concern; Publisher still must not create duplicate artifacts for the same `message_id` |
@@ -117,9 +114,11 @@ Normative receipt fields:
 | `stream_id` | Stream (when ordering applies) |
 | `sequence` | Allocated and verified sequence (when ordering applies) |
 | `target_ref` | Canonical transport ref (e.g. `refs/heads/…`) |
-| `publication_commit` | Commit/SHA or equivalent store version proving publication |
+| `publication_commit` | **Exact** commit/SHA or equivalent store version that introduced the published message |
 | `published_at` | Publisher-observed publication timestamp (transport evidence; not Core identity) |
 | `verified` | Boolean; MUST be `true` for a successful receipt |
+
+`publication_commit` MUST remain the original publication version when a later duplicate or uncertain reconciliation observes the message at a newer canonical head.
 
 Optional diagnostic metadata MAY be attached but MUST NOT replace these fields.
 

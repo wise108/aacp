@@ -8,10 +8,11 @@ from typing import Any, Literal
 
 @dataclass(frozen=True)
 class CanonicalState:
-    """Concurrency token for the authoritative store tip."""
+    """Concurrency token plus the authoritative ordered-stream domain."""
 
     token: str
     target_ref: str
+    stream_id: str
 
 
 @dataclass(frozen=True)
@@ -23,10 +24,19 @@ class PreparedPublication:
 
 
 @dataclass(frozen=True)
+class PublicationEvidence:
+    """Canonical evidence tying a published envelope to its store version."""
+
+    message: dict[str, Any]
+    publication_commit: str
+
+
+@dataclass(frozen=True)
 class CasSuccess:
     kind: Literal["success"] = "success"
-    new_state: CanonicalState = field(default_factory=lambda: CanonicalState("", ""))
+    new_state: CanonicalState = field(default_factory=lambda: CanonicalState("", "", ""))
     message: dict[str, Any] = field(default_factory=dict)
+    publication_commit: str = ""
 
 
 @dataclass(frozen=True)
@@ -55,4 +65,5 @@ CasResult = CasSuccess | CasConflict | CasUncertain
 class VerificationResult:
     verified: bool
     message: dict[str, Any] | None = None
+    publication_commit: str | None = None
     reason: str | None = None
