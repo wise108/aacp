@@ -27,6 +27,10 @@ from aacp.message_store.models import (
 class GitHubAPIError(RuntimeError):
     """GitHub API request failed."""
 
+    def __init__(self, message: str, *, status_code: int | None = None) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+
 
 class GitHubMessageStore:
     """GitHub Git Data API implementation of the MessageStore contract."""
@@ -79,12 +83,9 @@ class GitHubMessageStore:
                 raw = response.read()
         except HTTPError as exc:
             detail = exc.read().decode("utf-8", "replace")
-            # GitHub's Git ref update reports a non-fast-forward CAS loss as
-            # HTTP 409. HTTP 422 is a validation/semantic request error, not
-            # evidence that another writer advanced the canonical ref.
-            if exc.code == 409:
-                raise CasConflict(f"github_http_{exc.code}:{detail}") from exc
-            raise GitHubAPIError(f"github_http_{exc.code}:{detail}") from exc
+            raise GitHubAPIError(
+                f"github_http_{exc.code}:{detail}", status_code=exc.code
+            ) from exc
         return json.loads(raw.decode("utf-8")) if raw else None
 
     def _ref(self) -> dict[str, Any]:
@@ -170,8 +171,6 @@ class GitHubMessageStore:
                 "tree": tree["sha"],
                 "parents": [expected_state.token],
             })
-        except CasConflict:
-            return CasConflict("head_moved")
         except Exception as exc:
             return CasUncertain(f"object_creation_failed:{type(exc).__name__}")
         try:
@@ -179,8 +178,10 @@ class GitHubMessageStore:
                 "sha": new_commit["sha"],
                 "force": False,
             })
-        except CasConflict:
-            return CasConflict("head_moved")
+        except GitHubAPIError as exc:
+            if exc.status_code == 409:
+                return CasConflict("head_moved")
+            return CasUncertain("ref_update_outcome_unknown")
         except Exception:
             return CasUncertain("ref_update_outcome_unknown")
         try:
