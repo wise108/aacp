@@ -107,22 +107,34 @@ class OrderedConsumer:
         if message.message_id in self.seen:
             return "duplicate"
 
+        # A first observed message establishes the local cursor regardless of
+        # its absolute sequence. This lets a consumer rediscover a stream from
+        # an already-advanced durable position without inventing a gap.
+        if self.cursor_message_id is None:
+            self.seen.add(message.message_id)
+            self.by_sequence[message.sequence] = message.message_id
+            self.cursor_sequence = message.sequence
+            self.cursor_message_id = message.message_id
+            return "new"
+
+        # Messages strictly behind the durable cursor are late arrivals. A
+        # collision at the cursor itself remains a conflict.
+        if message.sequence < self.cursor_sequence:
+            self.seen.add(message.message_id)
+            self.by_sequence[message.sequence] = message.message_id
+            return "late"
+
         existing = self.by_sequence.get(message.sequence)
         if existing is not None and existing != message.message_id:
             self.unresolved_sequence = message.sequence
-            # The previously accepted message at this position can no longer
-            # justify cursor advancement. Roll back to the last safe position.
+            # The conflicting position is no longer safe to acknowledge. Keep
+            # the cursor at the last known safe position.
             self.cursor_sequence = message.sequence - 1
             self.cursor_message_id = self.by_sequence.get(self.cursor_sequence)
             raise OrderingConflict(message.sequence)
 
         if message.sequence > self.cursor_sequence + 1:
             raise SequenceGap((self.cursor_sequence, message.sequence))
-
-        if message.sequence <= self.cursor_sequence:
-            self.seen.add(message.message_id)
-            self.by_sequence[message.sequence] = message.message_id
-            return "late"
 
         self.seen.add(message.message_id)
         self.by_sequence[message.sequence] = message.message_id
