@@ -117,20 +117,19 @@ class OrderedConsumer:
             self.cursor_message_id = message.message_id
             return "new"
 
-        # Messages strictly behind the durable cursor are late arrivals. A
-        # collision at the cursor itself remains a conflict.
-        if message.sequence < self.cursor_sequence:
+        # Anything at or behind the durable cursor is historical. It cannot
+        # move the cursor, but a previously unseen identity is still retained
+        # so restart rediscovery remains deterministic.
+        if message.sequence <= self.cursor_sequence:
             self.seen.add(message.message_id)
-            self.by_sequence[message.sequence] = message.message_id
+            self.by_sequence.setdefault(message.sequence, message.message_id)
             return "late"
 
         existing = self.by_sequence.get(message.sequence)
         if existing is not None and existing != message.message_id:
+            # The cursor itself remains at the last known safe position. Do
+            # not manufacture a rollback from the conflicting sequence.
             self.unresolved_sequence = message.sequence
-            # The conflicting position is no longer safe to acknowledge. Keep
-            # the cursor at the last known safe position.
-            self.cursor_sequence = message.sequence - 1
-            self.cursor_message_id = self.by_sequence.get(self.cursor_sequence)
             raise OrderingConflict(message.sequence)
 
         if message.sequence > self.cursor_sequence + 1:
