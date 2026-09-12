@@ -203,7 +203,7 @@ class GitHubMessageStore:
         commits = self._request("GET", f"/repos/{self.owner}/{self.repo}/commits?path={self._message_path(message)}&sha={state.token}")
         if not commits:
             return None
-        return PublicationEvidence(message, commits[-1]["sha"])
+        return PublicationEvidence(message, commits[0]["sha"])
 
     def verify_publication(self, state: CanonicalState, message_id: str, sequence: int | None = None) -> VerificationResult:
         self._validate_state(state)
