@@ -109,6 +109,15 @@ class OrderedConsumer:
             self.cursor_message_id = message.message_id
             return "new"
 
+        # Once the cursor has advanced past a sequence, any new message at
+        # that historical position is late, even if it conflicts with the
+        # message already recorded there. It must not reopen an old position
+        # or move the durable cursor backward.
+        if message.sequence < self.cursor_sequence:
+            self.seen.add(message.message_id)
+            self.by_sequence.setdefault(message.sequence, message.message_id)
+            return "late"
+
         existing = self.by_sequence.get(message.sequence)
         if existing is not None and existing != message.message_id:
             self.unresolved_sequence = message.sequence
@@ -119,11 +128,6 @@ class OrderedConsumer:
             raise OrderingConflict(message.sequence)
 
         if message.sequence == self.cursor_sequence and message.message_id == self.cursor_message_id:
-            self.seen.add(message.message_id)
-            self.by_sequence.setdefault(message.sequence, message.message_id)
-            return "late"
-
-        if message.sequence < self.cursor_sequence:
             self.seen.add(message.message_id)
             self.by_sequence.setdefault(message.sequence, message.message_id)
             return "late"
