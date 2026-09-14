@@ -23,7 +23,7 @@ def make_repo(tmp_path: Path) -> Path:
     git(work, "config", "user.email", "aacp-test@example.invalid")
     (work / ".gitkeep").write_text("init\n", encoding="utf-8")
     git(work, "add", ".gitkeep")
-    git(work, "commit", "init")
+    git(work, "commit", "-m", "init")
     git(work, "branch", "-M", "main")
     git(work, "push", "origin", "main")
     return work
