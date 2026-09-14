@@ -54,7 +54,7 @@ def test_read_list_and_publish_cas_against_git_data_api() -> None:
                     sha = path.rsplit("/", 1)[-1]
                     return json.dumps({"content": base64.b64encode(json.dumps(objects[sha]).encode()).decode()}).encode()
                 if method == "GET" and path.startswith("/repos/o/r/commits?"):
-                    return json.dumps([{"sha": "publication"}]).encode()
+                    return json.dumps([{"sha": refs["main"]}]).encode()
                 if method == "POST" and path.endswith("/git/blobs"):
                     counter["n"] += 1
                     sha = f"b{counter['n']}"
@@ -63,12 +63,13 @@ def test_read_list_and_publish_cas_against_git_data_api() -> None:
                 if method == "POST" and path.endswith("/git/trees"):
                     counter["n"] += 1
                     sha = f"t{counter['n']}"
-                    objects[sha] = {"tree": []}
+                    objects[sha] = {"tree": [{"path": ".aacp/conversations/C-test/messages/000001-M-1.json", "sha": "b1"}]}
                     return json.dumps({"sha": sha}).encode()
                 if method == "POST" and path.endswith("/git/commits"):
                     counter["n"] += 1
                     sha = f"c{counter['n']}"
-                    objects[sha] = {"tree": {"sha": "t1"}}
+                    body = json.loads(request.data.decode())
+                    objects[sha] = {"tree": {"sha": body["tree"]}}
                     return json.dumps({"sha": sha}).encode()
                 if method == "PATCH" and path.endswith("/git/refs/heads/main"):
                     refs["main"] = json.loads(request.data.decode())["sha"]
