@@ -12,6 +12,7 @@ from aacp.publisher import (
     PublicationConflict,
     PublicationReceipt,
     Publisher,
+    TargetBinding,
     TargetInvalid,
 )
 from aacp.publisher.sequence import candidate_sequence
