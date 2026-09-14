@@ -38,8 +38,15 @@ class Publisher:
 
         last_reason = "none"
         for _ in range(self.max_attempts):
-            state = self.store.read_canonical_state()
-            self._validate_state_target(state, target)
+            try:
+                state = self.store.read_canonical_state()
+                self._validate_state_target(state, target)
+            except TargetInvalid:
+                raise
+            except Exception as exc:
+                last_reason = f"canonical_state_read:{exc}"
+                continue
+
             evidence = self.store.find_publication_evidence(
                 state, prepared["message_id"]
             )
